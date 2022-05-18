@@ -21,12 +21,12 @@ export const links: LinksFunction = () => [
 
 export default function App() {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <head>
         <Meta />
         <Links />
       </head>
-      <body className="lg:w-[1024px] my-0 mx-auto lg:py-10 p-5">
+      <body className="lg:w-[1024px] my-0 mx-auto lg:py-10 p-5 h-full">
         <Outlet />
         <ScrollRestoration />
         <Scripts />

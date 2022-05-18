@@ -1,8 +1,7 @@
 import { useParams } from "@remix-run/react"
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import PlayerCard from "~/components/PlayerCard"
-import RandomizedTimer from "~/components/RandomizedTimer"
-import SendReaction from "~/components/SendReaction"
 import TrmCard from "~/components/TrmCard"
 
 type TrmCard = {
@@ -92,12 +91,14 @@ const INITIAL_STATS_PLAYER_2: PlayerStats = {
 }
 
 export default function Room() {
-    const { roomId } = useParams()
+    const { ramId } = useParams()
 
     const [cards, setCards] = useState(INITIAL_CARD_DECK)
     const [statsPlayer1, setStatsPlayer1] = useState(INITIAL_STATS_PLAYER_1)
     const [statsPlayer2, setStatsPlayer2] = useState(INITIAL_STATS_PLAYER_2)
     const [isMyTurn, setIsMyTurn] = useState(true)
+
+    const isPublic = true
 
     const handleClick = (cardId: string) => {
         cards.forEach(card => {
@@ -135,14 +136,10 @@ export default function Room() {
     }
 
     return (
-        <div className="flex flex-col gap-10">
-            <h1 className="text-pink-500 text-6xl">Room {roomId}</h1>
-            <div className="flex flex-col md:flex-row gap-5">
-                <PlayerCard isMyTurn={isMyTurn} myself={true} username={statsPlayer1.username} matchedPairs={statsPlayer1.matchedPairs} />
-                <PlayerCard isMyTurn={!isMyTurn} username={statsPlayer2.username} matchedPairs={statsPlayer2.matchedPairs} />
-                <SendReaction />
-            </div>
-            <RandomizedTimer />
+        <div className="flex flex-col gap-5 justify-evenly h-full">
+            <Link to="/">
+                <h1 className="font-bold text-4xl">ONLYRams</h1>
+            </Link>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
                 { cards.map(({ id, clicked, imageUrl }) => (
                     <TrmCard 
@@ -153,6 +150,19 @@ export default function Room() {
                         cardClicked={handleClick} 
                     />
                 )) }
+            </div>
+            <div className="grid grid-cols-3 gap-5">
+                <div className="flex flex-col gap">
+                    <div>
+                        { isPublic ? 
+                            <p className="text-red-500 rounded-lg">Public</p> : 
+                            <p className="text-green-500 rounded-lg">Private</p>
+                        }
+                    </div>
+                    <h1 className="text-pink-500 text-4xl">RAM {ramId}</h1>
+                </div>
+                <PlayerCard isMyTurn={isMyTurn} myself={true} username={statsPlayer1.username} matchedPairs={statsPlayer1.matchedPairs} />
+                <PlayerCard isMyTurn={!isMyTurn} username={statsPlayer2.username} matchedPairs={statsPlayer2.matchedPairs} />
             </div>
         </div>
     )
