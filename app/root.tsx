@@ -26,7 +26,7 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="w-[1024px] my-0 mx-auto py-10">
+      <body className="lg:w-[1024px] my-0 mx-auto lg:py-10 p-5">
         <Outlet />
         <ScrollRestoration />
         <Scripts />

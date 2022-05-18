@@ -137,13 +137,13 @@ export default function Room() {
     return (
         <div className="flex flex-col gap-10">
             <h1 className="text-pink-500 text-6xl">Room {roomId}</h1>
-            <div className="flex flex-row gap-5">
+            <div className="flex flex-col md:flex-row gap-5">
                 <PlayerCard isMyTurn={isMyTurn} myself={true} username={statsPlayer1.username} matchedPairs={statsPlayer1.matchedPairs} />
                 <PlayerCard isMyTurn={!isMyTurn} username={statsPlayer2.username} matchedPairs={statsPlayer2.matchedPairs} />
                 <SendReaction />
             </div>
             <RandomizedTimer />
-            <div className="grid grid-cols-4 gap-5">
+            <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
                 { cards.map(({ id, clicked, imageUrl }) => (
                     <TrmCard 
                         id={id} 
