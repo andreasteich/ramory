@@ -6,7 +6,6 @@ const handleRequest = createPagesFunctionHandler({
   build,
   mode: process.env.NODE_ENV,
   getLoadContext: (context) => {
-    console.log('storage', context.env.sessionStorage, process.env.NODE_ENV)
     const sessionStorage = createCloudflareKVSessionStorage({
       cookie: {
         name: "__ramory",
