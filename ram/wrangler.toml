@@ -1,0 +1,10 @@
+name = "ram"
+main = "src/index.ts"
+compatibility_date = "2022-05-19"
+
+[durable_objects]
+bindings = [{ name = "RAM", class_name = "Ram" }]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["Ram"]
