@@ -138,7 +138,7 @@ export default function Room() {
     return (
         <div className="flex flex-col gap-5 justify-evenly h-full">
             <Link to="/">
-                <h1 className="font-bold text-4xl">ONLYRams</h1>
+                <h1 className="font-bold text-4xl">RAMory</h1>
             </Link>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
                 { cards.map(({ id, clicked, imageUrl }) => (

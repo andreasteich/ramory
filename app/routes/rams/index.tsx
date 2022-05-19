@@ -40,7 +40,7 @@ export default function Rams() {
     return (
         <div className="flex flex-col gap-20">
             <Link to="/">
-                <h1 className="font-bold text-4xl">ONLYRams</h1>
+                <h1 className="font-bold text-4xl">RAMory</h1>
             </Link>
             <div className="flex flex-row justify-between">
                 <h1 className="text-4xl font-bold">Rams</h1>
