@@ -1,4 +1,5 @@
-import { useParams } from "@remix-run/react"
+import { json, LoaderFunction } from "@remix-run/cloudflare"
+import { useLoaderData, useParams } from "@remix-run/react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import PlayerCard from "~/components/PlayerCard"
@@ -78,8 +79,6 @@ const INITIAL_CARD_DECK: TrmCard[] = [
     }
 ]
 
-
-
 const INITIAL_STATS_PLAYER_1: PlayerStats = {
     username: 'Andifined',
     matchedPairs: 0
@@ -90,11 +89,20 @@ const INITIAL_STATS_PLAYER_2: PlayerStats = {
     matchedPairs: 0
 }
 
+export const loader: LoaderFunction = async ({ context, request }) => {
+    const session = await context.sessionStorage.getSession(
+        request.headers.get("Cookie")
+    );
+
+    return json(session.get('username'))
+}
+
 export default function Room() {
     const { ramId } = useParams()
+    const username = useLoaderData()
 
     const [cards, setCards] = useState(INITIAL_CARD_DECK)
-    const [statsPlayer1, setStatsPlayer1] = useState(INITIAL_STATS_PLAYER_1)
+    const [statsPlayer1, setStatsPlayer1] = useState({ ...INITIAL_STATS_PLAYER_1, username })
     const [statsPlayer2, setStatsPlayer2] = useState(INITIAL_STATS_PLAYER_2)
     const [isMyTurn, setIsMyTurn] = useState(true)
 
@@ -136,10 +144,11 @@ export default function Room() {
     }
 
     return (
-        <div className="flex flex-col gap-5 justify-evenly h-full">
-            <Link to="/">
-                <h1 className="font-bold text-4xl">RAMory</h1>
-            </Link>
+        <div className="flex flex-col gap-5 justify-between h-full">
+            <div className="flex flex-row justify-between items-center">
+                <h1 className="font-bold text-6xl">RAMory</h1>
+                <Link to="/rams" className="px-4 py-2 border text-pink-500 hover:bg-gray-100 rounded-lg">Leave</Link>
+            </div>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
                 { cards.map(({ id, clicked, imageUrl }) => (
                     <TrmCard 
