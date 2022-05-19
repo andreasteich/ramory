@@ -44,9 +44,9 @@ export default function Index() {
         <h1 className="text-center font-bold text-6xl">RAMory</h1>
         <h2 className="text-center font-semibold text-4xl">How much memory do you have?</h2>
       </div>
-      <Form method="post">
-        <input type="text" placeholder="Enter username" name="username" />
-        <button type="submit" className="w-40 text-center bg-pink-500 hover:bg-pink-600 px-4 py-2 text-white rounded-lg">Let's find out</button>
+      <Form method="post" className="flex flex-col items-center gap-5">
+        <input type="text" placeholder="Enter username" name="username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+        <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's find out</button>
       </Form>
     </div>
   );
