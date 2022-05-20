@@ -2,6 +2,10 @@ name = "ram"
 main = "src/index.ts"
 compatibility_date = "2022-05-19"
 
+kv_namespaces = [
+    { binding = "RAM_REFS", id = "e9b3935e51534544a46362c3ad0e7142", preview_id = "11e97c0a5392442c9e4655932516d2c2" }
+]
+
 [durable_objects]
 bindings = [{ name = "RAM", class_name = "Ram" }]
 

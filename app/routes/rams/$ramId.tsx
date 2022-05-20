@@ -5,79 +5,12 @@ import { Link } from "react-router-dom"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
 
-type TrmCard = {
-    id: string;
-    clicked: boolean;
-    imageUrl: string;
-}
+
 
 type PlayerStats = {
     username: string
     matchedPairs: number
 }
-
-const INITIAL_CARD_DECK: TrmCard[] = [
-    {
-        id: '1',
-        clicked: false,
-        imageUrl: 'model-s.jpg'
-    },
-    {
-        id: '2',
-        clicked: false,
-        imageUrl: 'roadster-social.jpg'
-    },
-    {
-        id: '3',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '4',
-        clicked: false,
-        imageUrl: 'model-s.jpg'
-    },
-    {
-        id: '5',
-        clicked: false,
-        imageUrl: 'roadster-social.jpg'
-    },
-    {
-        id: '6',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '7',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '8',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '9',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '10',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '11',
-        clicked: false,
-        imageUrl: ''
-    },
-    {
-        id: '12',
-        clicked: false,
-        imageUrl: ''
-    }
-]
 
 const INITIAL_STATS_PLAYER_1: PlayerStats = {
     username: 'Andifined',
@@ -89,24 +22,38 @@ const INITIAL_STATS_PLAYER_2: PlayerStats = {
     matchedPairs: 0
 }
 
-export const loader: LoaderFunction = async ({ context, request }) => {
-    const session = await context.sessionStorage.getSession(
-        request.headers.get("Cookie")
-    );
+export const loader: LoaderFunction = async ({ params, context, request }) => {
+    const { ramId } = params
+    const response = await fetch(`http://localhost:8787/rams/${ramId}`)
 
-    return json(session.get('username'))
+    const data = await response.json()
+    console.log(data)
+
+    return json(data)
+}
+
+type TrmCard = {
+    id: string
+    clicked: boolean
+    imageUrl: string
 }
 
 export default function Room() {
     const { ramId } = useParams()
-    const username = useLoaderData()
 
-    const [cards, setCards] = useState(INITIAL_CARD_DECK)
-    const [statsPlayer1, setStatsPlayer1] = useState({ ...INITIAL_STATS_PLAYER_1, username })
-    const [statsPlayer2, setStatsPlayer2] = useState(INITIAL_STATS_PLAYER_2)
+    const { 
+        isPrivate, 
+        player1,
+        player2,
+        totalPairsMatched, 
+        topic,
+        deck
+    } = useLoaderData()
+
+    const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
+    const [statsPlayer1, setStatsPlayer1] = useState({ username: player1.username, matchedPairs: player1.matchedPairs })
+    const [statsPlayer2, setStatsPlayer2] = useState({ username: player2.username ?? '---', matchedPairs: player2.matchedPairs ?? 0 })
     const [isMyTurn, setIsMyTurn] = useState(true)
-
-    const isPublic = true
 
     const handleClick = (cardId: string) => {
         cards.forEach(card => {
@@ -146,7 +93,9 @@ export default function Room() {
     return (
         <div className="flex flex-col gap-5 justify-between h-full">
             <div className="flex flex-row justify-between items-center">
-                <h1 className="font-bold text-6xl">RAMory</h1>
+                <div className="flex flex-row gap-2">
+                    <h1 className="font-bold text-6xl">RAMory | {topic}</h1>
+                </div>
                 <Link to="/rams" className="px-4 py-2 border text-pink-500 hover:bg-gray-100 rounded-lg">Leave</Link>
             </div>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
@@ -161,17 +110,22 @@ export default function Room() {
                 )) }
             </div>
             <div className="grid grid-cols-3 gap-5">
-                <div className="flex flex-col gap">
-                    <div>
-                        { isPublic ? 
-                            <p className="text-red-500 rounded-lg">Public</p> : 
-                            <p className="text-green-500 rounded-lg">Private</p>
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap">
+                        { isPrivate ? 
+                            <p className="text-green-500 rounded-lg">Private</p> :
+                            <p className="text-red-500 rounded-lg">Public</p>
                         }
+                        <h1 className="text-pink-500 text-4xl">RAM {ramId}</h1>
                     </div>
-                    <h1 className="text-pink-500 text-4xl">RAM {ramId}</h1>
+                    <div>
+                        <button 
+                            className="text-sm border rounded-lg text-gray-500 px-4 py-2 hover:border-pink-500 hover:text-pink-500"
+                        >Copy RAM and send to friend</button>
+                    </div>
                 </div>
-                <PlayerCard isMyTurn={isMyTurn} myself={true} username={statsPlayer1.username} matchedPairs={statsPlayer1.matchedPairs} />
-                <PlayerCard isMyTurn={!isMyTurn} username={statsPlayer2.username} matchedPairs={statsPlayer2.matchedPairs} />
+                <PlayerCard isMyTurn={isMyTurn} myself={true} username={statsPlayer1.username} matchedPairs={statsPlayer1.matchedPairs} totalPairsMatched={totalPairsMatched} />
+                <PlayerCard isMyTurn={!isMyTurn} username={statsPlayer2.username} matchedPairs={statsPlayer2.matchedPairs} totalPairsMatched={totalPairsMatched} />
             </div>
         </div>
     )

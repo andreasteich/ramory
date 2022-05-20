@@ -21,6 +21,7 @@
     "@remix-run/react": "^1.4.3",
     "cross-env": "^7.0.3",
     "framer-motion": "^6.3.3",
+    "itty-router": "^2.6.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
