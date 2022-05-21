@@ -9,22 +9,8 @@ export default {
 
         let id = env.RAM.idFromName(doId)
         let stub = env.RAM.get(id);
-
-        if (path[2] === 'flip-card') {
-          const cardId = path[3]
-
-          let newUrl = new URL(request.url);
-          newUrl.pathname = `/flip-card/${cardId}`
-
-          return await stub.fetch(newUrl);
-        }
-
-        
   
-        let newUrl = new URL(request.url);
-        newUrl.pathname = "/data"
-  
-        return await stub.fetch(newUrl);
+        return await stub.fetch(request);
       }
 
       if (request.method === 'POST') {
@@ -34,11 +20,11 @@ export default {
         let stub = env.RAM.get(id);
   
         await stub.fetch(request);
-        await env.RAM_REFS.put(randomString, 'RAM_REF')
+        // await env.RAM_REFS.put(randomString, 'RAM_REF')
   
         return new Response(JSON.stringify({ ramId: randomString }))
       } else if (request.method === 'GET') {
-        const list = await env.RAM_REFS.list()
+        // const list = await env.RAM_REFS.list()
         return new Response(JSON.stringify([]))
       }
       
@@ -59,101 +45,102 @@ type Player = {
   matchedPairs: number
   websocket?: WebSocket
   username?: string
-  cookie?: string
+  cookie?: string | null
 }
 
 type TrmCard = {
-  id: string;
-  clicked: boolean;
-  imageUrl: string;
+  id: string
+  clicked: boolean
+  imageUrl: string
+  active: boolean
 }
 
 const DECK_CARS: TrmCard[] = [
   {
       id: '1',
       clicked: false,
-      imageUrl: 'model-s.jpg'
+      imageUrl: 'model-s.jpg',
+      active: true
   },
   {
       id: '2',
       clicked: false,
-      imageUrl: 'roadster-social.jpg'
+      imageUrl: 'roadster-social.jpg',
+      active: true
   },
   {
       id: '3',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '4',
       clicked: false,
-      imageUrl: 'model-s.jpg'
+      imageUrl: 'model-s.jpg',
+      active: true
   },
   {
       id: '5',
       clicked: false,
-      imageUrl: 'roadster-social.jpg'
+      imageUrl: 'roadster-social.jpg',
+      active: true
   },
   {
       id: '6',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '7',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '8',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '9',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '10',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '11',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   },
   {
       id: '12',
       clicked: false,
-      imageUrl: ''
+      imageUrl: '',
+      active: true
   }
 ]
 
-// The de-facto unbiased shuffle algorithm is the Fisher-Yates (aka Knuth) Shuffle, says stackoverflow.com
-function shuffle(deck: TrmCard[]) {
-  let currentIndex = deck.length, randomIndex;
-
-  while (currentIndex != 0) {
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex--;
-
-    [deck[currentIndex], deck[randomIndex]] = [deck[randomIndex], deck[currentIndex]];
-  }
-
-  return deck;
-}
-
 export class Ram {
-  name: string | undefined
-  topic: string | undefined
+  playerLimit: number = 2
   isPrivate = true
-  totalPairsMatched = 10
-  player1: Player = { matchedPairs: 0 }
-  player2: Player = { matchedPairs: 0 }
+  totalPairs = 6
+  topic: string | undefined
+  players: Player[] = []
   deck: TrmCard[] = []
   isTurnOf: string | undefined
+  
+  // player1: Player = { matchedPairs: 0 }
+  // player2: Player = { matchedPairs: 0 }
 
   state: DurableObjectState
   env: any
@@ -164,23 +151,34 @@ export class Ram {
   }
 
   async fetch(request: Request) {
+    let headersObject = Object.fromEntries(request.headers)
+    let requestHeaders = JSON.stringify(headersObject, null, 2)
+    console.log(`Request headers: ${requestHeaders}`)
+
     let url = new URL(request.url);
     let path = url.pathname.slice(1).split('/');
+
+    console.log(url, path)
 
     if (url.pathname.includes('websocket')) {
       if (request.headers.get("Upgrade") != "websocket") {
         return new Response("expected websocket", {status: 400});
       }
 
+      const cookie = request.headers.get('Cookie')
+      if (cookie) { console.log('found cookie')}
+
       let ip = request.headers.get("CF-Connecting-IP");
 
       const [client, server] = Object.values(new WebSocketPair());
 
-      if (!this.player1.websocket) {
-        await this.handleSession(this.player1, server, ip);
-      } else {
-        await this.handleSession(this.player2, server, ip);
+      const player = this.players.find(player => player.cookie === cookie)
+
+      if (!player) {
+        return new Response('No player found, logic seems broken. Time for a ticket I guess 😞')
       }
+
+      await this.handleSession(player, server, ip)
       
       const headers = new Headers()
       headers.set('Access-Control-Allow-Origin', '*')
@@ -190,49 +188,58 @@ export class Ram {
     }
 
     switch (path[0]) {
+      // TODO: would be nice to rewrite to something like /create or /new
       case 'rams': {
-        const { topic, isPrivate, totalPairsMatched, username, cookie } = await request.json()
+        const ramId = path[1]
+
+        if (ramId && request.method === 'POST') {
+          const { username, cookie } = await request.json()
+
+          const playerAlreadyExists = this.players.find(player => player.cookie === cookie)
+
+          if (!playerAlreadyExists) {
+            this.players.push({ username, cookie, matchedPairs: 0 })
+          }
+
+          const data = {
+            topic: this.topic,
+            isPrivate: this.isPrivate,
+            isTurnOf: this.isTurnOf,
+            players: this.players.map(player => ({ 
+              username: player.username, 
+              itsMe: player.cookie === cookie, 
+              matchedPairs: player.matchedPairs 
+            })),
+            deck: this.deck
+          }
+
+          return new Response(JSON.stringify(data))
+        }
+
+        const { topic, isPrivate } = await request.json()
 
         this.topic = topic
 
         switch (topic) {
           case 'cars':
-            this.deck = shuffle(DECK_CARS)
+            this.deck = DECK_CARS
             break;
         }
 
         this.isPrivate = isPrivate
-        this.totalPairsMatched = totalPairsMatched
-        this.isTurnOf = 'player1'
-
-        const player1: Player = {
-          username,
-          matchedPairs: 0,
-          cookie
-        }
-
-        this.player1 = player1
 
         return new Response('Created')
-      }
-
-      case 'data': {
-        const data = {
-          topic: this.topic,
-          isPrivate: this.isPrivate,
-          totalPairsMatched: this.totalPairsMatched,
-          isTurnOf: this.isTurnOf,
-          player1: this.player1,
-          player2: this.player2,
-          deck: this.deck
-        }
-
-        return new Response(JSON.stringify(data))
       }
 
       default:
         return new Response("Not found", {status: 404});
     }
+  }
+
+  private broadcast(action: any) {
+    this.players.forEach(player => {
+      player.websocket?.send(JSON.stringify(action))
+    })
   }
 
   async handleSession(player: Player, webSocket: any, ip: string) {
@@ -254,25 +261,39 @@ export class Ram {
 
             const clickedCards = this.deck.filter(card => card.clicked)
 
-            if (clickedCards.length >= 2) {
+            if (clickedCards.length === 2) {
                 setTimeout(() => {
                   if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
-                    if (this.isTurnOf === 'player1') {
-                      this.player1.matchedPairs = this.player1.matchedPairs + 1
-                    } else {
-                      this.player2.matchedPairs = this.player2.matchedPairs + 1
+                    this.broadcast({ action: 'pairFound', payload: [clickedCards[0].id, clickedCards[1].id] })
+
+                    const playerToAdjust = this.players.find(player => player.username === 'username')
+
+                    // TODO: throw error
+                    if (!playerToAdjust) {
+                      console.error('Not possible?!')
+                      return
                     }
+
+                    playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
+                    this.broadcast({ action: 'incrementPairsOfPlayer' })
+
+                    clickedCards[0].active = false
+                    clickedCards[1].active = false
+
+                    if (Number(this.player1.matchedPairs) === Number(this.totalPairsMatched)) {
+                      this.player1.websocket?.send(JSON.stringify({ action: 'youWon' }))
+                    } else if (Number(this.player2.matchedPairs) === Number(this.totalPairsMatched)) {
+                      this.player1.websocket?.send(JSON.stringify({ action: 'youLost' }))
+                    }
+                  } else {
+                    this.isTurnOf = this.isTurnOf === 'player1' ? 'player2' : 'player1'
+                    this.broadcast({ action: 'noMatch' })
                   }
 
-                  this.isTurnOf = 'player1' ? 'player2' : 'player1'
-
                   this.deck.forEach(card => card.clicked = false)
-                  this.deck = shuffle(this.deck)
 
                   this.player1.websocket?.send(JSON.stringify({ action: 'isTurnOf', payload: this.isTurnOf }))
-                  this.player1.websocket?.send(JSON.stringify({ action: 'setPairsPlayer1', payload: this.player1.matchedPairs }))
-                  this.player1.websocket?.send(JSON.stringify({ action: 'setPairsPlayer2', payload: this.player2.matchedPairs }))
-                  this.player1.websocket?.send(JSON.stringify({ action: 'randomize', payload: this.deck.map(({ id }) => id) }))
+                  this.player1.websocket?
                 }, 1000)
             }
 

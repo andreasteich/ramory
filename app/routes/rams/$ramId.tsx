@@ -1,30 +1,23 @@
-import { ActionFunction, json, LoaderFunction } from "@remix-run/cloudflare"
-import { Form, useLoaderData, useParams, useSubmit } from "@remix-run/react"
-import axios from "axios"
+import { json, LoaderFunction } from "@remix-run/cloudflare"
+import { useLoaderData, useParams, useSubmit } from "@remix-run/react"
 import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
+import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
 
-
-type PlayerStats = {
-    username: string
-    matchedPairs: number
-}
-
-const INITIAL_STATS_PLAYER_1: PlayerStats = {
-    username: 'Andifined',
-    matchedPairs: 0
-}
-
-const INITIAL_STATS_PLAYER_2: PlayerStats = {
-    username: '---',
-    matchedPairs: 0
-}
-
 export const loader: LoaderFunction = async ({ params, context, request }) => {
+    const cookie = request.headers.get("Cookie")
+    const session = await context.sessionStorage.getSession(cookie);
+
     const { ramId } = params
-    const response = await fetch(`http://localhost:8787/rams/${ramId}`)
+    const response = await fetch(`http://localhost:8787/rams/${ramId}`, { 
+        body: JSON.stringify({
+            username: session.get('username'),
+            cookie
+        }),
+        method: 'POST'
+    })
 
     const data = await response.json()
     console.log(data)
@@ -32,22 +25,18 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     return json(data)
 }
 
-export const action: ActionFunction = async ({ params, context, request }) => {
-    const { ramId } = params
-    const { cardId } = Object.fromEntries(await request.formData())
-    
-    const response = await fetch(`http://localhost:8787/rams/${ramId}/flip-card/${cardId}`)
-
-    console.log(await response.text())
-
-    return json(null)
-}
-
 type TrmCard = {
     id: string
     clicked: boolean
     imageUrl: string
+    active: boolean
 }
+
+type Player = {
+    matchedPairs: number
+    username: string
+    itsMe: boolean
+  }
 
 export default function Room() {
     const socket = useRef<WebSocket>()
@@ -55,19 +44,14 @@ export default function Room() {
     const { ramId } = useParams()
     const submit = useSubmit()
 
-    const { 
-        isPrivate, 
-        player1,
-        player2,
-        totalPairsMatched, 
-        topic,
-        deck
-    } = useLoaderData()
+    const data = useLoaderData()
+    const { isPrivate, topic, deck } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
-    const [statsPlayer1, setStatsPlayer1] = useState({ username: player1.username, matchedPairs: player1.matchedPairs })
-    const [statsPlayer2, setStatsPlayer2] = useState({ username: player2.username ?? '---', matchedPairs: player2.matchedPairs ?? 0 })
-    const [isMyTurn, setIsMyTurn] = useState(true)
+    const [players, setPlayers] = useState<Player[]>(data.players)
+    const [isTurnOf, setIsTurnOf] = useState<string | undefined>(data.isTurnOf)
+    const [showYouWonModal, setShowYouWonModal] = useState(false)
+    const [showYouLostModal, setShowYouLostModal] = useState(false)
 
     useEffect(() => {
         socket.current = new WebSocket(`ws://localhost:8787/websocket/${ramId}`);
@@ -90,15 +74,39 @@ export default function Room() {
                     })
                     break
 
-                case 'randomize':
+                case 'pairFound':
                     setCards(prevCards => {
                         let cards = prevCards.map(card => ({
                             ...card,
-                            clicked: false
+                            clicked: false,
+                            active: card.active ? !payload.includes(card.id) : card.active
                         }))
 
-                        return cards.sort((a, b) => payload.indexOf(a.id) - payload.indexOf(b.id))
+                        return cards
                     })
+                    break
+
+                case 'isTurnOf':
+                    setIsTurnOf(payload)
+                    break
+
+                case 'incrementPairsOfPlayer':
+                    setPlayers(prevPlayers => prevPlayers.map(player => ({
+                        ...player,
+                        matchedPairs: player.username === payload ? payload : player.matchedPairs
+                    })))
+                    break
+
+                case 'youWon':
+                    setShowYouWonModal(true)
+                    break
+
+                case 'youLost':
+                    setShowYouLostModal(true)
+                    break
+                
+                case 'noMatch':
+                    setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
                     break
             }
 
@@ -118,12 +126,13 @@ export default function Room() {
                 <Link to="/rams" className="px-4 py-2 border text-pink-500 hover:bg-gray-100 rounded-lg">Leave</Link>
             </div>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
-                { cards.map(({ id, clicked, imageUrl }) => (
+                { cards.map(({ id, clicked, imageUrl, active }) => (
                     <TrmCard 
                         key={id}
                         id={id}
                         clicked={clicked} 
                         imageUrl={imageUrl}
+                        active={active}
                         cardClicked={flipCard}
                     />
                 )) }
@@ -143,9 +152,20 @@ export default function Room() {
                         >Copy RAM and send to friend</button>
                     </div>
                 </div>
-                <PlayerCard isMyTurn={isMyTurn} myself={true} username={statsPlayer1.username} matchedPairs={statsPlayer1.matchedPairs} totalPairsMatched={totalPairsMatched} />
-                <PlayerCard isMyTurn={!isMyTurn} username={statsPlayer2.username} matchedPairs={statsPlayer2.matchedPairs} totalPairsMatched={totalPairsMatched} />
-            </div>
+                { players.map(({ username, itsMe, matchedPairs }) => (
+                    <PlayerCard key={username} active={isTurnOf === username} myself={itsMe} username={username} matchedPairs={matchedPairs} />
+                ))}
+                </div>
+            { showYouWonModal && (
+                <Modal closeModal={() => setShowYouWonModal(true)}>
+                    <h1>Nice you won!</h1>
+                </Modal>
+            )}
+            { showYouLostModal && (
+                <Modal closeModal={() => setShowYouLostModal(true)}>
+                    <h1>Looser!</h1>
+                </Modal>
+            )}
         </div>
     )
 }
