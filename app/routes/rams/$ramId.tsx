@@ -1,10 +1,10 @@
-import { json, LoaderFunction } from "@remix-run/cloudflare"
-import { useLoaderData, useParams } from "@remix-run/react"
-import { useState } from "react"
+import { ActionFunction, json, LoaderFunction } from "@remix-run/cloudflare"
+import { Form, useLoaderData, useParams, useSubmit } from "@remix-run/react"
+import axios from "axios"
+import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
-
 
 
 type PlayerStats = {
@@ -32,6 +32,17 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     return json(data)
 }
 
+export const action: ActionFunction = async ({ params, context, request }) => {
+    const { ramId } = params
+    const { cardId } = Object.fromEntries(await request.formData())
+    
+    const response = await fetch(`http://localhost:8787/rams/${ramId}/flip-card/${cardId}`)
+
+    console.log(await response.text())
+
+    return json(null)
+}
+
 type TrmCard = {
     id: string
     clicked: boolean
@@ -39,7 +50,10 @@ type TrmCard = {
 }
 
 export default function Room() {
+    const socket = useRef<WebSocket>()
+
     const { ramId } = useParams()
+    const submit = useSubmit()
 
     const { 
         isPrivate, 
@@ -55,39 +69,44 @@ export default function Room() {
     const [statsPlayer2, setStatsPlayer2] = useState({ username: player2.username ?? '---', matchedPairs: player2.matchedPairs ?? 0 })
     const [isMyTurn, setIsMyTurn] = useState(true)
 
-    const handleClick = (cardId: string) => {
-        cards.forEach(card => {
-            if (card.id === cardId) {
-                card.clicked = !card.clicked
-            }
-        })
+    useEffect(() => {
+        socket.current = new WebSocket(`ws://localhost:8787/websocket/${ramId}`);
 
-        const clickedCards = cards.filter(card => card.clicked)
+        socket.current.onmessage = ({ data }) => {
+            const { action, payload } = JSON.parse(data)
+            
+            switch (action) {
+                case 'flipCard':
+                    setCards(prevCards => {
+                        const cards = [...prevCards]
 
-        if (clickedCards.length >= 2) {
-            if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
-                if (isMyTurn) {
-                    setStatsPlayer1({
-                        ...statsPlayer1,
-                        matchedPairs: statsPlayer1.matchedPairs + 1
+                        cards.forEach(card => {
+                            if (card.id === payload) {
+                                card.clicked = !card.clicked
+                            }
+                        })
+
+                        return cards
                     })
-                } else {
-                    setStatsPlayer2({
-                        ...statsPlayer2,
-                        matchedPairs: statsPlayer2.matchedPairs + 1
+                    break
+
+                case 'randomize':
+                    setCards(prevCards => {
+                        let cards = prevCards.map(card => ({
+                            ...card,
+                            clicked: false
+                        }))
+
+                        return cards.sort((a, b) => payload.indexOf(a.id) - payload.indexOf(b.id))
                     })
-                }
-                
+                    break
             }
 
-            setTimeout(() => {
-                cards.forEach(card => card.clicked = false)
-                setCards([...cards])
-                setIsMyTurn(!isMyTurn)
-            }, 1000)
         }
+    }, [])
 
-        setCards([...cards])
+    const flipCard = id => {
+        socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
     }
 
     return (
@@ -101,11 +120,11 @@ export default function Room() {
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
                 { cards.map(({ id, clicked, imageUrl }) => (
                     <TrmCard 
-                        id={id} 
-                        key={id} 
+                        key={id}
+                        id={id}
                         clicked={clicked} 
-                        imageUrl={imageUrl} 
-                        cardClicked={handleClick} 
+                        imageUrl={imageUrl}
+                        cardClicked={flipCard}
                     />
                 )) }
             </div>
