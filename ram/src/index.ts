@@ -9,8 +9,17 @@ export default {
 
         let id = env.RAM.idFromName(doId)
         let stub = env.RAM.get(id);
-  
-        return await stub.fetch(request);
+
+        if (path[2] === 'leave' && request.method === 'DELETE') {
+          const response = await stub.fetch(request)
+          const { ramToDelete } = await response.json()
+
+          await env.RAM_REFS.delete(doId)
+
+          return new Response(null, { status: 200 })
+        }
+
+        return await stub.fetch(request)
       }
 
       if (request.method === 'POST') {
@@ -19,13 +28,19 @@ export default {
         let id = env.RAM.idFromName(randomString)
         let stub = env.RAM.get(id);
   
-        await stub.fetch(request);
-        // await env.RAM_REFS.put(randomString, 'RAM_REF')
+        const response = await stub.fetch(request);
+        const { isPrivate } = await response.json()
+
+        if (!isPrivate) {
+          // await env.RAM_REFS.put(randomString, 'RAM_REF')
+        } 
   
         return new Response(JSON.stringify({ ramId: randomString }))
       } else if (request.method === 'GET') {
-        // const list = await env.RAM_REFS.list()
-        return new Response(JSON.stringify([]))
+        //const list = await env.RAM_REFS.list()
+        const list = []
+
+        return new Response(JSON.stringify(list))
       }
       
     } else if (path[0] === 'websocket') {
@@ -158,11 +173,9 @@ export class Ram {
     let url = new URL(request.url);
     let path = url.pathname.slice(1).split('/');
 
-    console.log(url, path)
-
     if (url.pathname.includes('websocket')) {
       if (request.headers.get("Upgrade") != "websocket") {
-        return new Response("expected websocket", {status: 400});
+        return new Response("expected websocket", { status: 400 });
       }
 
       const cookie = request.headers.get('Cookie')
@@ -175,11 +188,12 @@ export class Ram {
       const player = this.players.find(player => player.cookie === cookie)
 
       if (!player) {
-        return new Response('No player found, logic seems broken. Time for a ticket I guess 😞')
+        return new Response('You have to have a sesseion!', {status: 400});
       }
 
       await this.handleSession(player, server, ip)
       
+      // TODO: test without access-control-allow-origin header (security risk?)
       const headers = new Headers()
       headers.set('Access-Control-Allow-Origin', '*')
       const response = new Response(null, { status: 101, webSocket: client, headers });
@@ -192,28 +206,60 @@ export class Ram {
       case 'rams': {
         const ramId = path[1]
 
-        if (ramId && request.method === 'POST') {
-          const { username, cookie } = await request.json()
+        if (ramId) {
+          if (path[2] === 'leave' && request.method === 'DELETE') {
+            const cookie = request.headers.get('Cookie')
 
-          const playerAlreadyExists = this.players.find(player => player.cookie === cookie)
+            const playerToRemove = { ...this.players.find(player => player.cookie === cookie) }
 
-          if (!playerAlreadyExists) {
-            this.players.push({ username, cookie, matchedPairs: 0 })
+            if (!playerToRemove) {
+              return new Response('Something went wrong, contact the developers')
+            }
+            
+            this.players = this.players.filter(player => player.cookie !== cookie)
+            console.log(this.players)
+
+            this.broadcast({ action: 'playerLeft', payload: playerToRemove.username })
+
+            let ramToDelete = false
+
+            if (!this.players.length) {
+              this.state.storage.deleteAll()
+              ramToDelete = true
+            }
+
+            return new Response(JSON.stringify({ ramToDelete }))
           }
 
-          const data = {
-            topic: this.topic,
-            isPrivate: this.isPrivate,
-            isTurnOf: this.isTurnOf,
-            players: this.players.map(player => ({ 
-              username: player.username, 
-              itsMe: player.cookie === cookie, 
-              matchedPairs: player.matchedPairs 
-            })),
-            deck: this.deck
-          }
+          if (request.method === 'POST') {
+            const { username, cookie } = await request.json()
 
-          return new Response(JSON.stringify(data))
+            const playerAlreadyExists = this.players.find(player => player.cookie === cookie)
+  
+            if (!playerAlreadyExists && cookie) {
+              this.players.push({ username, cookie, matchedPairs: 0 })
+            }
+  
+            if (!this.isTurnOf) {
+              this.isTurnOf = this.players[0].username
+            }
+  
+            const data = {
+              topic: this.topic,
+              isPrivate: this.isPrivate,
+              isTurnOf: this.isTurnOf,
+              players: this.players.map(player => ({ 
+                username: player.username, 
+                itsMe: player.cookie === cookie, 
+                matchedPairs: player.matchedPairs 
+              })),
+              deck: this.deck
+            }
+
+            // this.broadcast({ action: 'playerJoined', payload:  })
+  
+            return new Response(JSON.stringify(data))
+          }
         }
 
         const { topic, isPrivate } = await request.json()
@@ -228,7 +274,7 @@ export class Ram {
 
         this.isPrivate = isPrivate
 
-        return new Response('Created')
+        return new Response(JSON.stringify({ isPrivate }))
       }
 
       default:
@@ -236,8 +282,12 @@ export class Ram {
     }
   }
 
-  private broadcast(action: any) {
+  private broadcast(action: any, exceptPlayerWithUsername: string | undefined = undefined) {
     this.players.forEach(player => {
+      if (player.username === exceptPlayerWithUsername) {
+        return
+      }
+
       player.websocket?.send(JSON.stringify(action))
     })
   }
@@ -266,7 +316,7 @@ export class Ram {
                   if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
                     this.broadcast({ action: 'pairFound', payload: [clickedCards[0].id, clickedCards[1].id] })
 
-                    const playerToAdjust = this.players.find(player => player.username === 'username')
+                    const playerToAdjust = this.players.find(player => player.username === this.isTurnOf)
 
                     // TODO: throw error
                     if (!playerToAdjust) {
@@ -275,29 +325,45 @@ export class Ram {
                     }
 
                     playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
-                    this.broadcast({ action: 'incrementPairsOfPlayer' })
+                    this.broadcast({ action: 'incrementPairsOfPlayer', payload: playerToAdjust.username })
 
                     clickedCards[0].active = false
                     clickedCards[1].active = false
 
-                    if (Number(this.player1.matchedPairs) === Number(this.totalPairsMatched)) {
-                      this.player1.websocket?.send(JSON.stringify({ action: 'youWon' }))
-                    } else if (Number(this.player2.matchedPairs) === Number(this.totalPairsMatched)) {
-                      this.player1.websocket?.send(JSON.stringify({ action: 'youLost' }))
+                    const allPairsFound = !this.deck.find(card => card.active)
+                    
+                    if (allPairsFound) {
+                      const winner = this.players.reduce((previousPlayer, currentPlayer) => {
+                        if (previousPlayer.matchedPairs > currentPlayer.matchedPairs) {
+                          return previousPlayer
+                        } else {
+                          return currentPlayer
+                        }
+                      })
+
+                      const { username, websocket } = winner
+                      
+                      this.broadcast({ action: 'youLost' }, username)
+                      websocket?.send(JSON.stringify({ action: 'youWon' }))
                     }
                   } else {
-                    this.isTurnOf = this.isTurnOf === 'player1' ? 'player2' : 'player1'
+                    const currentPlayersIndex = this.players.findIndex(player => player.username === this.isTurnOf)
+                    
+                    try {
+                      this.isTurnOf = this.players[currentPlayersIndex + 1].username
+                    } catch(e) {
+                      this.isTurnOf = this.players[0].username
+                    }
+
                     this.broadcast({ action: 'noMatch' })
+                    this.broadcast({ action: 'isTurnOf', payload: this.isTurnOf })
                   }
 
                   this.deck.forEach(card => card.clicked = false)
-
-                  this.player1.websocket?.send(JSON.stringify({ action: 'isTurnOf', payload: this.isTurnOf }))
-                  this.player1.websocket?
                 }, 1000)
             }
 
-            this.player1.websocket?.send(JSON.stringify({ action: 'flipCard', payload }))
+            this.broadcast({ action: 'flipCard', payload })
             break;
         }
         

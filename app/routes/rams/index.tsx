@@ -12,7 +12,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
         return redirect('/')
     }
 
-    const response = await fetch('http://localhost:8787/rams')
+    const response = await fetch('http://192.168.2.62:8787/rams')
     const rams = await response.json()
 
     return json({
@@ -23,7 +23,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
 
 export const action: ActionFunction = async ({ context, request }) => {
     const cookie = request.headers.get("Cookie")
-    const session = await context.sessionStorage.getSession(cookie);
+    const session = await context.sessionStorage.getSession(cookie)
 
     const {
         ramType,
@@ -39,7 +39,7 @@ export const action: ActionFunction = async ({ context, request }) => {
         topic
     }
 
-    const response = await fetch('http://localhost:8787/rams', { 
+    const response = await fetch('http://192.168.2.62:8787/rams', { 
         method: 'POST',
         body: JSON.stringify(payload)
     })

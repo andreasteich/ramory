@@ -1,7 +1,6 @@
-import { json, LoaderFunction } from "@remix-run/cloudflare"
-import { useLoaderData, useParams, useSubmit } from "@remix-run/react"
+import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
+import { Form, useLoaderData, useParams } from "@remix-run/react"
 import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
 import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
@@ -11,7 +10,7 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     const session = await context.sessionStorage.getSession(cookie);
 
     const { ramId } = params
-    const response = await fetch(`http://localhost:8787/rams/${ramId}`, { 
+    const response = await fetch(`http://192.168.2.62:8787/rams/${ramId}`, { 
         body: JSON.stringify({
             username: session.get('username'),
             cookie
@@ -19,10 +18,31 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
         method: 'POST'
     })
 
-    const data = await response.json()
-    console.log(data)
+    console.log(session, cookie)
+    const data: object = await response.json()
 
-    return json(data)
+    return json({ 
+        ...data,
+        hasSession: !!cookie
+    })
+}
+
+export const action: ActionFunction = async({ params, context, request }) => {
+    const { ramId } = params
+    // TODO: refactor into util, same logic from landing-page
+
+    const form = await request.formData();
+    const username = form.get("username");
+
+    const session = await context.sessionStorage.getSession(
+        request.headers.get("Cookie")
+    );
+
+    session.set('username', username)
+
+    return redirect(`/rams/${ramId}`, {
+        headers: { "Set-Cookie": await context.sessionStorage.commitSession(session) }
+    });
 }
 
 type TrmCard = {
@@ -42,19 +62,19 @@ export default function Room() {
     const socket = useRef<WebSocket>()
 
     const { ramId } = useParams()
-    const submit = useSubmit()
 
     const data = useLoaderData()
-    const { isPrivate, topic, deck } = data
+    const { isPrivate, topic, deck, hasSession } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
     const [players, setPlayers] = useState<Player[]>(data.players)
     const [isTurnOf, setIsTurnOf] = useState<string | undefined>(data.isTurnOf)
     const [showYouWonModal, setShowYouWonModal] = useState(false)
     const [showYouLostModal, setShowYouLostModal] = useState(false)
+    const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
     useEffect(() => {
-        socket.current = new WebSocket(`ws://localhost:8787/websocket/${ramId}`);
+        socket.current = new WebSocket(`ws://192.168.2.62:8787/websocket/${ramId}`);
 
         socket.current.onmessage = ({ data }) => {
             const { action, payload } = JSON.parse(data)
@@ -91,10 +111,14 @@ export default function Room() {
                     break
 
                 case 'incrementPairsOfPlayer':
-                    setPlayers(prevPlayers => prevPlayers.map(player => ({
-                        ...player,
-                        matchedPairs: player.username === payload ? payload : player.matchedPairs
-                    })))
+                    setPlayers(prevPlayers => {
+                        let cards = prevPlayers.map(player => ({
+                            ...player,
+                            matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
+                        }))
+
+                        return cards
+                    })
                     break
 
                 case 'youWon':
@@ -123,7 +147,10 @@ export default function Room() {
                 <div className="flex flex-row gap-2">
                     <h1 className="font-bold text-6xl">RAMory | {topic}</h1>
                 </div>
-                <Link to="/rams" className="px-4 py-2 border text-pink-500 hover:bg-gray-100 rounded-lg">Leave</Link>
+                <Form method="post" action="/leave-ram">
+                    <input hidden value={ramId} name="ramToLeave" readOnly />
+                    <button className="px-4 py-2 border text-pink-500 hover:bg-gray-100 rounded-lg" type="submit">Leave</button>
+                </Form>
             </div>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
                 { cards.map(({ id, clicked, imageUrl, active }) => (
@@ -164,6 +191,15 @@ export default function Room() {
             { showYouLostModal && (
                 <Modal closeModal={() => setShowYouLostModal(true)}>
                     <h1>Looser!</h1>
+                </Modal>
+            )}
+            { showEnterUsernameModal && (
+                <Modal closeModal={() => setShowEnterUsernameModal(true)} >
+                    <h1>Enter username</h1>
+                    <Form reloadDocument method="post" className="flex flex-col items-center gap-5">
+                        <input type="text" placeholder="Enter username" name="username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+                        <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's go!</button>
+                    </Form>
                 </Modal>
             )}
         </div>
