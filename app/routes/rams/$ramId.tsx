@@ -104,7 +104,7 @@ export default function Room() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
     useEffect(() => {
-        socket.current = new WebSocket(`wss://ram.ramory.workers.dev/websocket/${ramId}`)
+        socket.current = new WebSocket(`wss://ram.ramory.workers.dev/websocket/${ramId}?player=${document.cookie}`)
 
         socket.current.onmessage = ({ data }) => {
             const { action, payload } = JSON.parse(data)
