@@ -1,4 +1,4 @@
-import { ActionFunction, json, redirect } from "@remix-run/cloudflare";
+import { ActionFunction, redirect } from "@remix-run/cloudflare";
 
 export const action: ActionFunction = async ({ context, request }) => {
     const session = await context.sessionStorage.getSession(

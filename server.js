@@ -16,7 +16,7 @@ const handleRequest = createPagesFunctionHandler({
       kv: context.env.sessionStorage,
     })
 
-    return { sessionStorage }
+    return { sessionStorage, env: context.env }
   }
 });
 

@@ -10,7 +10,12 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     const session = await context.sessionStorage.getSession(cookie);
 
     const { ramId } = params
-    const response = await fetch(`http://192.168.2.62:8787/rams/${ramId}`, { 
+
+    const { env } = context
+
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+
+    const response = await fetch(`${protocol}://${env.HOST}/rams/${ramId}`, { 
         body: JSON.stringify({
             username: session.get('username'),
             cookie
@@ -23,7 +28,8 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
 
     return json({ 
         ...data,
-        hasSession: !!cookie
+        hasSession: !!cookie,
+        deployUrl: env.HOST
     })
 }
 
@@ -64,7 +70,7 @@ export default function Room() {
     const { ramId } = useParams()
 
     const data = useLoaderData()
-    const { isPrivate, topic, deck, hasSession } = data
+    const { isPrivate, topic, deck, hasSession, deployUrl } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
     const [players, setPlayers] = useState<Player[]>(data.players)
@@ -74,7 +80,8 @@ export default function Room() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
     useEffect(() => {
-        socket.current = new WebSocket(`ws://192.168.2.62:8787/websocket/${ramId}`);
+        const protocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws'
+        socket.current = new WebSocket(`${protocol}://${deployUrl}/websocket/${ramId}`)
 
         socket.current.onmessage = ({ data }) => {
             const { action, payload } = JSON.parse(data)
@@ -131,6 +138,22 @@ export default function Room() {
                 
                 case 'noMatch':
                     setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
+                    break
+                
+                case 'playerJoined':
+                    const { username, matchedPairs, itsMe } = payload
+
+                    setPlayers(prevPlayers => {
+                        let cards = prevPlayers.map(player => ({
+                            ...player,
+                            matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
+                        }))
+
+                        cards.push({ matchedPairs, username, itsMe })
+
+                        return cards
+                    })
+
                     break
             }
 

@@ -256,7 +256,7 @@ export class Ram {
               deck: this.deck
             }
 
-            // this.broadcast({ action: 'playerJoined', payload:  })
+            this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, itsMe: false } })
   
             return new Response(JSON.stringify(data))
           }

@@ -12,7 +12,10 @@ export const loader: LoaderFunction = async ({ context, request }) => {
         return redirect('/')
     }
 
-    const response = await fetch('http://192.168.2.62:8787/rams')
+    const { env } = context
+
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    const response = await fetch(`${protocol}://${env.HOST}/rams`)
     const rams = await response.json()
 
     return json({
@@ -38,8 +41,11 @@ export const action: ActionFunction = async ({ context, request }) => {
         totalPairsMatched: matchedPairsTotal,
         topic
     }
+    
+    const { env } = context
 
-    const response = await fetch('http://192.168.2.62:8787/rams', { 
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    const response = await fetch(`${protocol}://${env.HOST}/rams`, { 
         method: 'POST',
         body: JSON.stringify(payload)
     })
