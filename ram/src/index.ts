@@ -146,16 +146,13 @@ const DECK_CARS: TrmCard[] = [
 ]
 
 export class Ram {
-  playerLimit: number = 2
+  allowedPlayersInTotal = 2
   isPrivate = true
   totalPairs = 6
-  topic: string | undefined
   players: Player[] = []
-  deck: TrmCard[] = []
+  // TODO: revoke shuffle
+  deck: TrmCard[] = DECK_CARS
   isTurnOf: string | undefined
-  
-  // player1: Player = { matchedPairs: 0 }
-  // player2: Player = { matchedPairs: 0 }
 
   state: DurableObjectState
   env: any
@@ -245,7 +242,7 @@ export class Ram {
             }
   
             const data = {
-              topic: this.topic,
+              allowedPlayersInTotal: this.allowedPlayersInTotal,
               isPrivate: this.isPrivate,
               isTurnOf: this.isTurnOf,
               players: this.players.map(player => ({ 
@@ -262,15 +259,9 @@ export class Ram {
           }
         }
 
-        const { topic, isPrivate } = await request.json()
+        const { isPrivate, allowedPlayersInTotal } = await request.json()
 
-        this.topic = topic
-
-        switch (topic) {
-          case 'cars':
-            this.deck = DECK_CARS
-            break;
-        }
+        this.allowedPlayersInTotal = allowedPlayersInTotal
 
         this.isPrivate = isPrivate
 
