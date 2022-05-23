@@ -11,7 +11,7 @@ type Props = {
 export default function TrmCard({ id, clicked, imageUrl, active, cardClicked }: Props) {
     return (
         <motion.div 
-            className={`shadow-lg hover:cursor-pointer rounded-2xl h-40 ${active ? 'bg-pink-500' : 'bg-gray-400'} flex flex-col justify-center`}
+            className={`shadow-lg hover:cursor-pointer h-full rounded-2xl ${active ? 'bg-pink-500' : 'bg-gray-400'} flex flex-col justify-center`}
             onClick={() => cardClicked(id)}
             initial="hidden"
             whileInView="visible"
@@ -26,7 +26,7 @@ export default function TrmCard({ id, clicked, imageUrl, active, cardClicked }: 
             }}
             whileTap={{ rotate: active ? 360 : 0 }}
         >
-            { clicked ? <img src={'/' + imageUrl} className="object-cover rounded-2xl" /> : <p className="text-black my-0 mx-auto font-bold text-2xl">TRM</p> }
+            { clicked ? <img src={'/' + imageUrl} className="object-cover rounded-2xl" /> : <p className="text-black my-0 mx-auto font-bold text-2xl">🧩</p> }
         </motion.div>
     )
 }

@@ -2,6 +2,10 @@ import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloud
 import { Form, Link, useLoaderData } from "@remix-run/react"
 import { useState } from "react"
 import Modal from "~/components/Modal"
+import RamCard from "~/components/RamCard"
+import Toggle from "~/components/Toggle"
+import { constructUrl } from "~/utils"
+import { PlusIcon } from '@heroicons/react/outline'
 
 export const loader: LoaderFunction = async ({ context, request }) => {
     const session = await context.sessionStorage.getSession(
@@ -28,24 +32,18 @@ export const action: ActionFunction = async ({ context, request }) => {
     const cookie = request.headers.get("Cookie")
     const session = await context.sessionStorage.getSession(cookie)
 
-    const {
-        ramType,
-        matchedPairsTotal,
-        topic
-    } = Object.fromEntries(await request.formData())
+    const { ramType, allowedPlayersInTotal } = Object.fromEntries(await request.formData())
 
     const payload = {
         username: session.get('username'),
         cookie,
         isPrivate: ramType === 'private',
-        totalPairsMatched: matchedPairsTotal,
-        topic
+        allowedPlayersInTotal
     }
     
     const { env } = context
 
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const response = await fetch(`${protocol}://${env.HOST}/rams`, { 
+    const response = await fetch(constructUrl(env.HOST, 'rams'), { 
         method: 'POST',
         body: JSON.stringify(payload)
     })
@@ -57,7 +55,7 @@ export const action: ActionFunction = async ({ context, request }) => {
 
 export default function Rams() {
     const { username, rams } = useLoaderData()
-    const [visible, setVisible] = useState(false)
+    const [visible, setVisible] = useState(true)
 
     return (
         <div className="flex flex-col gap-20">
@@ -72,73 +70,40 @@ export default function Rams() {
             </div>
             <div className="flex flex-col gap-10">
                 <div className="flex flex-row justify-between">
-                    <h1 className="text-4xl font-bold">Rams</h1>
+                    <h1 className="text-4xl">Public Rams</h1>
                     <button 
                         onClick={() => setVisible(true)}
-                        className="px-4 py-2 bg-pink-500 text-white font-semibold hover:bg-pink-600 rounded-lg"
-                    >Create Ram</button>
+                        className="px-4 py-2 bg-gray-200 text-pink-500 hover:bg-gray-300 rounded-lg flex flex-row gap-2 items-center"
+                    ><PlusIcon className="h-4" /> Create Ram</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-                    { rams.map(({ id, player }) => (
-                        <div key={id} className="flex flex-col gap-5">
-                            <div className="flex flex-col gap-2">
-                                <p className="font-bold">{id}</p>
-                                <p>Waiting for you: {player}</p>
-                            </div>
-                            <Link to={id}>
-                                <p className="px-4 py-2 text-center bg-gray-200 hover:bg-gray-300 rounded-lg text-pink-500">Ready to ramble</p>
-                            </Link>
+                    { rams.length ? 
+                        rams.map(ram => (
+                            <RamCard key={ram.id} {...ram} />
+                        )) :
+                        <div>
+                            <p>No public rams available, create the first one!</p>
                         </div>
-                    ))}
+                    }
+                    
                 </div>
             </div>
             {visible && (
                 <Modal closeModal={() => setVisible(false)}>
-                    <div className="flex flex-col gap-10">
-                        <h2 className="text-4xl font-semibold">How do you like your RAM?</h2>
-                        <Form reloadDocument method="post" className="flex flex-col gap-5">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="private" name="ramType" value="private" defaultChecked />
-                                    <label htmlFor="private">Private</label>
-                                </div>
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="public" name="matchedPairsTotal" value="public" defaultChecked />
-                                    <label htmlFor="public">Public</label>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="5" name="matchedPairsTotal" value="5" />
-                                    <label htmlFor="5">5 pairs to win</label>
-                                </div>
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="10" name="matchedPairsTotal" value="10" defaultChecked />
-                                    <label htmlFor="10">10 pairs to win</label>
-                                </div>
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="15" name="matchedPairsTotal" value="15" />
-                                    <label htmlFor="15">15 pairs to win</label>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="cars" name="topic" value="cars" defaultChecked />
-                                    <label htmlFor="cars">Cars</label>
-                                </div>
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="wrestling" name="topic" value="wrestling" disabled />
-                                    <label htmlFor="wrestling">Wrestling</label>
-                                </div>
-                                <div className="flex flex-row gap-2 items-center">
-                                    <input type="radio" id="brands" name="topic" value="brands" disabled />
-                                    <label htmlFor="brands">Brands</label>
-                                </div>
+                    <div className="flex flex-col gap-20">
+                        <div className="flex flex-col gap-5">
+                            <h2 className="text-4xl font-semibold">How do you like your RAM?</h2>
+                            <h3 className="text-gray-500">Configure your own RAM, you decide which mode to play, how much player in total you like and if it should be private or not.</h3>
+                        </div>
+                        <Form reloadDocument method="post" className="flex flex-col gap-20 items-start">
+                            <div className="flex flex-col gap-10 items-start">
+                                <Toggle id="ramType" label="private RAM" required={true} />
+                                <input type="number" required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" name="allowedPlayersInTotal" placeholder="How much player in total?" />
                             </div>
                             <button 
                                 className="rounded-lg hover:bg-pink-600 bg-pink-500 py-2 px-4 text-white" 
                                 type="submit"
-                            >Create</button>
+                            >Ready to RAMble</button>
                         </Form>
                     </div>
                     

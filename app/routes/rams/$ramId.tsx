@@ -1,9 +1,11 @@
+import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
 import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
 import { Form, useLoaderData, useParams } from "@remix-run/react"
 import { useEffect, useRef, useState } from "react"
 import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
+import { motion } from 'framer-motion'
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const cookie = request.headers.get("Cookie")
@@ -62,15 +64,39 @@ type Player = {
     matchedPairs: number
     username: string
     itsMe: boolean
-  }
+}
+
+type Reaction = {
+    label: string
+    value: string
+}
 
 export default function Room() {
+    const reactions: Reaction[] = [
+        {
+            label: '🤔',
+            value: 'thinking'
+        },
+        {
+            label: '🥳',
+            value: 'party'
+        },
+        {
+            label: '🥸',
+            value: 'nerdy'
+        },
+        {
+            label: '🤗',
+            value: 'hugs'
+        }
+    ]
+
     const socket = useRef<WebSocket>()
 
     const { ramId } = useParams()
 
     const data = useLoaderData()
-    const { isPrivate, topic, deck, hasSession, deployUrl } = data
+    const { isPrivate, deck, hasSession, deployUrl, allowedPlayersInTotal } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
     const [players, setPlayers] = useState<Player[]>(data.players)
@@ -165,17 +191,28 @@ export default function Room() {
     }
 
     return (
-        <div className="flex flex-col gap-5 justify-between h-full">
+        <div className="flex flex-col gap-10 justify-between h-full">
             <div className="flex flex-row justify-between items-center">
-                <div className="flex flex-row gap-2">
-                    <h1 className="font-bold text-6xl">RAMory | {topic}</h1>
-                </div>
-                <Form method="post" action="/leave-ram">
+                <h1 className="font-bold text-6xl">RAMory</h1>
+                <div className="flex flex-row gap-5 items-center">
+                { isPrivate ? 
+                    <div className="flex flex-row border px-4 py-2 rounded-xl gap-2 text-green-500 border-green-500 items-center">
+                        <LockClosedIcon className="h-4 w-4 text-green-400"/>
+                        <p className="text-sm">Private</p>
+                    </div> :
+                    <div className="flex flex-row border px-4 py-2 rounded-xl gap-2 text-red-500 items-center">
+                        <LockOpenIcon className="h-4"/>
+                        <p>Public</p>
+                    </div>
+                }
+                <Form method="post" action="/leave-ram" className="flex flex-row gap-2 items-center hover:cursor-pointer">
                     <input hidden value={ramId} name="ramToLeave" readOnly />
-                    <button className="px-4 py-2 border text-pink-500 hover:bg-gray-100 rounded-lg" type="submit">Leave</button>
+                    <button className="text-sm rounded-lg" type="submit">Leave</button>
+                    <ArrowRightIcon className="h-4"></ArrowRightIcon>
                 </Form>
+                </div>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-5">
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-5 h-full">
                 { cards.map(({ id, clicked, imageUrl, active }) => (
                     <TrmCard 
                         key={id}
@@ -187,25 +224,39 @@ export default function Room() {
                     />
                 )) }
             </div>
-            <div className="grid grid-cols-3 gap-5">
-                <div className="flex flex-col gap-2">
-                    <div className="flex flex-col gap">
-                        { isPrivate ? 
-                            <p className="text-green-500 rounded-lg">Private</p> :
-                            <p className="text-red-500 rounded-lg">Public</p>
-                        }
-                        <h1 className="text-pink-500 text-4xl">RAM {ramId}</h1>
-                    </div>
-                    <div>
-                        <button 
-                            className="text-sm border rounded-lg text-gray-500 px-4 py-2 hover:border-pink-500 hover:text-pink-500"
-                        >Copy RAM and send to friend</button>
-                    </div>
+            <div className="flex flex-col gap-2">
+                <div className="flex flex-row gap-2 items-center">
+                    <UsersIcon className="h-4" />
+                    <p className="text-sm font-bold">{players.length} / {allowedPlayersInTotal}</p>
                 </div>
+                <div className="flex flex-col gap">
                 { players.map(({ username, itsMe, matchedPairs }) => (
                     <PlayerCard key={username} active={isTurnOf === username} myself={itsMe} username={username} matchedPairs={matchedPairs} />
                 ))}
                 </div>
+            </div>
+            <div className="flex flex-row gap-5 items-center justify-between">
+                <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
+                { reactions.map(({ label, value }) => (
+                    <motion.p
+                        key={value}
+                        className="hover:cursor-pointer"
+                        whileHover={{
+                            scale: 1.2,
+                            transition: { duration: 0.1 },
+                        }}
+                        whileTap={{ rotate: 360 }}
+                    >{label}</motion.p>
+                ))}
+                </div>
+                <div className="flex flex-row gap-5">
+                    <button 
+                        className="text-pink-500 px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-xl flex flex-row gap-2 items-center"
+                    ><ClipboardIcon className="h-4"/>Copy RAM and send to friend</button>
+                </div>
+                
+            </div>
+            
             { showYouWonModal && (
                 <Modal closeModal={() => setShowYouWonModal(true)}>
                     <h1>Nice you won!</h1>
