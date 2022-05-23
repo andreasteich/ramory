@@ -48,6 +48,8 @@ export default {
       }
       
     } else if (path[0] === 'websocket') {
+      console.log('in worker', request.headers.get('Cookie'))
+
       let id = env.RAM.idFromName(path[1])
       let stub = env.RAM.get(id);
 
@@ -128,14 +130,15 @@ export class Ram {
     let path = url.pathname.slice(1).split('/');
 
     if (url.pathname.includes('websocket')) {
-      if (request.headers.get("Upgrade") != "websocket") {
+      if (request.headers.get("upgrade") != "websocket") {
         return new Response("expected websocket", { status: 400 });
       }
 
-      const cookie = request.headers.get('Cookie')
-      if (cookie) { console.log('found cookie')}
+      const cookie = request.url.split('?')[1].split('player=')[1]
 
-      let ip = request.headers.get("CF-Connecting-IP");
+      console.log('value', cookie)
+
+      const ip = request.headers.get("CF-Connecting-IP");
 
       const [client, server] = Object.values(new WebSocketPair());
 
@@ -171,7 +174,6 @@ export class Ram {
             }
             
             this.players = this.players.filter(player => player.cookie !== cookie)
-            console.log(this.players)
 
             this.broadcast({ action: 'playerLeft', payload: playerToRemove.username })
 
