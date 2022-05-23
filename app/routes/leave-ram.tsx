@@ -7,11 +7,7 @@ export const action: ActionFunction = async ({ context, request }) => {
 
     if (!cookie) { return json(null) }
 
-    const { env } = context
-
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-
-    await fetch(`${protocol}://${env.HOST}/rams/${ramToLeave}/leave`, {
+    await fetch(`https://ram.ramory.workers.dev/rams/${ramToLeave}/leave`, {
         method: 'DELETE',
         headers: {
             'Cookie': cookie

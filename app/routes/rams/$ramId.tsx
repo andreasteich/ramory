@@ -1,7 +1,7 @@
 import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
 import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
 import { Form, useLoaderData, useParams } from "@remix-run/react"
-import { useEffect, useRef, useState } from "react"
+import { ReactNode, useEffect, useRef, useState } from "react"
 import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
@@ -15,9 +15,7 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
 
     const { env } = context
 
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-
-    const response = await fetch(`${protocol}://${env.HOST}/rams/${ramId}`, { 
+    const response = await fetch(`https://ram.ramory.workers.dev/rams/${ramId}`, { 
         body: JSON.stringify({
             username: session.get('username'),
             cookie
@@ -56,7 +54,7 @@ export const action: ActionFunction = async({ params, context, request }) => {
 type TrmCard = {
     id: string
     clicked: boolean
-    imageUrl: string
+    imageUrl: any
     active: boolean
 }
 
@@ -106,8 +104,7 @@ export default function Room() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
     useEffect(() => {
-        const protocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws'
-        socket.current = new WebSocket(`${protocol}://${deployUrl}/websocket/${ramId}`)
+        socket.current = new WebSocket(`wss://ram.ramory.workers.dev/websocket/${ramId}`)
 
         socket.current.onmessage = ({ data }) => {
             const { action, payload } = JSON.parse(data)
