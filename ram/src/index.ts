@@ -1,3 +1,7 @@
+import React, { ReactNode } from "react";
+import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
+
+
 export default {
   async fetch(request, env) {
     let url = new URL(request.url);
@@ -64,94 +68,47 @@ type Player = {
 }
 
 type TrmCard = {
-  id: string
+  id?: string
   clicked: boolean
   imageUrl: string
   active: boolean
 }
 
-const DECK_CARS: TrmCard[] = [
-  {
-      id: '1',
-      clicked: false,
-      imageUrl: 'model-s.jpg',
-      active: true
-  },
-  {
-      id: '2',
-      clicked: false,
-      imageUrl: 'roadster-social.jpg',
-      active: true
-  },
-  {
-      id: '3',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '4',
-      clicked: false,
-      imageUrl: 'model-s.jpg',
-      active: true
-  },
-  {
-      id: '5',
-      clicked: false,
-      imageUrl: 'roadster-social.jpg',
-      active: true
-  },
-  {
-      id: '6',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '7',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '8',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '9',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '10',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '11',
-      clicked: false,
-      imageUrl: '',
-      active: true
-  },
-  {
-      id: '12',
-      clicked: false,
-      imageUrl: '',
-      active: true
+const PAIRS: string[] = ['🫐', '🫒', '🍕', '🥩', '🫑', '🥥', '🧄', '🥖', '🥫']
+
+function shuffle(array: TrmCard[]) {
+  let counter = array.length;
+
+  while (counter > 0) {
+      let index = Math.floor(Math.random() * counter);
+
+      counter--;
+
+      let temp = array[counter];
+      array[counter] = array[index];
+      array[index] = temp;
   }
-]
+
+  return array;
+}
+
+function createTrmCards(images: string[]) {
+  return images
+    .map<TrmCard>(image => ({
+      clicked: false,
+      imageUrl: image,
+      active: true
+    }))
+    .flatMap(card => [card, card])
+    .map((card, index) => ({ ...card, id: index.toString() }))
+}
 
 export class Ram {
   allowedPlayersInTotal = 2
   isPrivate = true
   totalPairs = 6
   players: Player[] = []
-  // TODO: revoke shuffle
-  deck: TrmCard[] = DECK_CARS
+  deck: TrmCard[] = shuffle(createTrmCards(PAIRS))
   isTurnOf: string | undefined
 
   state: DurableObjectState

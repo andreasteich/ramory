@@ -3,7 +3,7 @@ import { useState } from "react"
 type Props = {
     id: string
     label: string
-    required: boolean
+    required?: boolean
 }
 
 export default function Toggle({ id, label, required }: Props) {
@@ -13,7 +13,7 @@ export default function Toggle({ id, label, required }: Props) {
         <div className="flex items-center justify-center">
             <label htmlFor={id} className="flex items-center cursor-pointer">
                 <div className="relative">
-                    <input type="checkbox" id={id} className="sr-only" onChange={() => setIsToggled(!isToggled)} checked={isToggled} required={required} />
+                    <input type="checkbox" id={id} name={id} className="sr-only" value="private" onChange={() => setIsToggled(!isToggled)} checked={isToggled} required={required} />
                     <div className="block bg-gray-600 w-14 h-8 rounded-full"></div>
                     <div 
                         style= {{

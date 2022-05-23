@@ -4,7 +4,6 @@ import { useState } from "react"
 import Modal from "~/components/Modal"
 import RamCard from "~/components/RamCard"
 import Toggle from "~/components/Toggle"
-import { constructUrl } from "~/utils"
 import { PlusIcon } from '@heroicons/react/outline'
 
 export const loader: LoaderFunction = async ({ context, request }) => {
@@ -16,10 +15,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
         return redirect('/')
     }
 
-    const { env } = context
-
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const response = await fetch(`${protocol}://${env.HOST}/rams`)
+    const response = await fetch('https://ram.ramory.workers.dev/rams')
     const rams = await response.json()
 
     return json({
@@ -34,16 +30,16 @@ export const action: ActionFunction = async ({ context, request }) => {
 
     const { ramType, allowedPlayersInTotal } = Object.fromEntries(await request.formData())
 
+    console.log(ramType, allowedPlayersInTotal)
+
     const payload = {
         username: session.get('username'),
         cookie,
         isPrivate: ramType === 'private',
         allowedPlayersInTotal
     }
-    
-    const { env } = context
 
-    const response = await fetch(constructUrl(env.HOST, 'rams'), { 
+    const response = await fetch('https://ram.ramory.workers.dev/rams', { 
         method: 'POST',
         body: JSON.stringify(payload)
     })
@@ -97,7 +93,7 @@ export default function Rams() {
                         </div>
                         <Form reloadDocument method="post" className="flex flex-col gap-20 items-start">
                             <div className="flex flex-col gap-10 items-start">
-                                <Toggle id="ramType" label="private RAM" required={true} />
+                                <Toggle id="ramType" label="private RAM" />
                                 <input type="number" required className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" name="allowedPlayersInTotal" placeholder="How much player in total?" />
                             </div>
                             <button 
