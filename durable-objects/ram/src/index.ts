@@ -1,7 +1,3 @@
-import React, { ReactNode } from "react";
-import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
-
-
 export default {
   async fetch(request, env) {
     let url = new URL(request.url);
@@ -62,20 +58,6 @@ export default {
   }
 }
 
-type Player = {
-  matchedPairs: number
-  websocket?: WebSocket
-  username?: string
-  cookie?: string | null
-}
-
-type TrmCard = {
-  id?: string
-  clicked: boolean
-  imageUrl: string
-  active: boolean
-}
-
 const PAIRS: string[] = ['🫐', '🫒', '🍕', '🥩', '🫑', '🥥', '🧄', '🥖', '🥫']
 
 function shuffle(array: TrmCard[]) {
@@ -97,6 +79,7 @@ function shuffle(array: TrmCard[]) {
 function createTrmCards(images: string[]) {
   return images
     .map<TrmCard>(image => ({
+      id: '',
       clicked: false,
       imageUrl: image,
       active: true

@@ -51,24 +51,6 @@ export const action: ActionFunction = async({ params, context, request }) => {
     });
 }
 
-type TrmCard = {
-    id: string
-    clicked: boolean
-    imageUrl: any
-    active: boolean
-}
-
-type Player = {
-    matchedPairs: number
-    username: string
-    itsMe: boolean
-}
-
-type Reaction = {
-    label: string
-    value: string
-}
-
 export default function Room() {
     const reactions: Reaction[] = [
         {
