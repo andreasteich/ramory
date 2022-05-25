@@ -193,8 +193,18 @@ export default function Ram() {
         }
     }, [])
 
-    const flipCard = id => {
-        socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
+    const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
+
+    const shareBoard = async () => {
+        try {
+            await navigator.share({
+                title: 'RAMory 🎸',
+                text: 'How good is your memory?',
+                url: window.location.href
+            })
+          } catch(err) {
+            console.log(err)
+          }
     }
 
     const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
@@ -261,6 +271,7 @@ export default function Ram() {
                 </div>
                 <div className="flex flex-row gap-5">
                     <button 
+                        onClick={() => shareBoard()}
                         className="text-pink-500 px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-xl flex flex-row gap-2 items-center"
                     ><ClipboardIcon className="h-4"/>Copy RAM and send to friend</button>
                 </div>
