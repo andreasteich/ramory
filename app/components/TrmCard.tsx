@@ -5,15 +5,16 @@ type Props = {
     id: string
     clicked: boolean
     imageUrl: any
+    isMyTurn: boolean
     active: boolean
     cardClicked: (id: string) => void
 }
 
-export default function TrmCard({ id, clicked, imageUrl, active, cardClicked }: Props) {
+export default function TrmCard({ id, clicked, imageUrl, active, isMyTurn, cardClicked }: Props) {
     return (
         <motion.div 
             className={`shadow-lg hover:cursor-pointer h-full rounded-2xl ${active ? 'bg-pink-500' : 'bg-gray-300'} flex flex-col justify-center`}
-            onClick={() => cardClicked(id)}
+            onClick={isMyTurn && active ? () => cardClicked(id) : () => {}}
             initial="hidden"
             whileInView="visible"
             transition={{ duration: 0.3 }}
@@ -22,12 +23,12 @@ export default function TrmCard({ id, clicked, imageUrl, active, cardClicked }: 
                 hidden: { opacity: 0, scale: 0 }
             }}
             whileHover={{
-                scale: active ? 1.1 : 1.0,
+                scale: active && isMyTurn ? 1.1 : 1.0,
                 transition: { duration: 0.1 },
             }}
-            whileTap={{ rotate: active ? 360 : 0 }}
+            whileTap={{ rotate: active && isMyTurn ? 360 : 0 }}
         >
-            { clicked ? <p className='text-center'>{ imageUrl }</p> : <p className={`${active ? 'text-black' : 'text-gray-400'} my-0 mx-auto`}>RAM</p> }
+            { clicked ? <p className='text-center text-4xl md:text-6xl'>{ imageUrl }</p> : <p className={`${active ? 'text-black' : 'text-gray-400'} my-0 text-4xl md:text-6xl mx-auto`}>R</p> }
         </motion.div>
     )
 }
