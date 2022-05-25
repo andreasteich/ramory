@@ -12,7 +12,7 @@
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix watch",
     "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
-    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv sessionStorage",
+    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv sessionStorage --binding DO_HOST=\"localhost:56082\"",
     "start": "cross-env NODE_ENV=production npm run dev:wrangler"
   },
   "dependencies": {
