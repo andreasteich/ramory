@@ -142,7 +142,7 @@ export class Ram {
         this.connections.push({ cookie, server })
       }
       
-      await this.handleSession(server, '')
+      await this.handleSession(server)
       
       
       // TODO: test without access-control-allow-origin header (security risk?)
@@ -238,8 +238,7 @@ export class Ram {
 
         await this.state.storage.put('allowedPlayersInTotal', allowedPlayersInTotal)
         await this.state.storage.put('topic', topic)
-        const deck = shuffle(createTrmCards(PAIRS, allowedPlayersInTotal))
-        await this.state.storage.put('deck', deck)
+        await this.state.storage.put('deck', shuffle(createTrmCards(PAIRS, allowedPlayersInTotal)))
 
         return new Response(JSON.stringify({ isPrivate }))
       }
@@ -259,7 +258,7 @@ export class Ram {
     })
   }
 
-  async handleSession(webSocket: any, ip: string) {
+  private async handleSession(webSocket: any) {
     webSocket.accept();
 
     webSocket.addEventListener('message', async ({ data }) => {
