@@ -113,92 +113,95 @@ export default function Ram() {
     const [showYouLostModal, setShowYouLostModal] = useState(false)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
-    useEffect(() => {
-        socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${ramId}?player=${document.cookie}`, true))
-
-        socket.current.onmessage = ({ data }) => {
-            const { action, payload } = JSON.parse(data)
-            
-            switch (action) {
-                case 'flipCard':
-                    setCards(prevCards => {
-                        const cards = [...prevCards]
-
-                        cards.forEach(card => {
-                            if (card.id === payload) {
-                                card.clicked = !card.clicked
-                            }
+    if (hasSession) {
+        useEffect(() => {
+            socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${ramId}?player=${document.cookie}`, true))
+    
+            socket.current.onmessage = ({ data }) => {
+                const { action, payload } = JSON.parse(data)
+                
+                switch (action) {
+                    case 'flipCard':
+                        setCards(prevCards => {
+                            const cards = [...prevCards]
+    
+                            cards.forEach(card => {
+                                if (card.id === payload) {
+                                    card.clicked = !card.clicked
+                                }
+                            })
+    
+                            return cards
                         })
-
-                        return cards
-                    })
-                    break
-
-                case 'pairFound':
-                    setCards(prevCards => {
-                        let cards = prevCards.map(card => ({
-                            ...card,
-                            clicked: false,
-                            active: card.active ? !payload.includes(card.id) : card.active
-                        }))
-
-                        return cards
-                    })
-                    break
-
-                case 'isTurnOf':
-                    setIsTurnOf(payload)
-                    break
-
-                case 'incrementPairsOfPlayer':
-                    setPlayers(prevPlayers => {
-                        let cards = prevPlayers.map(player => ({
-                            ...player,
-                            matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
-                        }))
-
-                        return cards
-                    })
-                    break
-
-                case 'youWon':
-                    setShowYouWonModal(true)
-                    break
-
-                case 'youLost':
-                    setShowYouLostModal(true)
-                    break
-                
-                case 'noMatch':
-                    setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
-                    break
-                
-                case 'playerJoined':
-                    const { username, matchedPairs, itsMe } = payload
-
-                    setPlayers(prevPlayers => {
-                        let cards = prevPlayers.map(player => ({
-                            ...player,
-                            matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
-                        }))
-
-                        cards.push({ matchedPairs, username, itsMe })
-
-                        return cards
-                    })
-
-                    break
+                        break
+    
+                    case 'pairFound':
+                        setCards(prevCards => {
+                            let cards = prevCards.map(card => ({
+                                ...card,
+                                clicked: false,
+                                active: card.active ? !payload.includes(card.id) : card.active
+                            }))
+    
+                            return cards
+                        })
+                        break
+    
+                    case 'isTurnOf':
+                        setIsTurnOf(payload)
+                        break
+    
+                    case 'incrementPairsOfPlayer':
+                        setPlayers(prevPlayers => {
+                            let cards = prevPlayers.map(player => ({
+                                ...player,
+                                matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
+                            }))
+    
+                            return cards
+                        })
+                        break
+    
+                    case 'youWon':
+                        setShowYouWonModal(true)
+                        break
+    
+                    case 'youLost':
+                        setShowYouLostModal(true)
+                        break
+                    
+                    case 'noMatch':
+                        setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
+                        break
+                    
+                    case 'playerJoined':
+                        const { username, matchedPairs, itsMe } = payload
+    
+                        setPlayers(prevPlayers => {
+                            let cards = prevPlayers.map(player => ({
+                                ...player,
+                                matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
+                            }))
+    
+                            cards.push({ matchedPairs, username, itsMe })
+    
+                            return cards
+                        })
+    
+                        break
+                }
+    
             }
-
-        }
-    }, [])
+        }, [])
+    }
+    
 
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
 
     const shareBoard = async () => {
         try {
             await navigator.share({
-                title: 'RAMory 🎸',
+                title: 'RAMory',
                 text: 'How good is your memory?',
                 url: window.location.href
             })
