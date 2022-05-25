@@ -178,14 +178,16 @@ export default function Ram() {
                         const { username, matchedPairs, itsMe } = payload
     
                         setPlayers(prevPlayers => {
-                            let cards = prevPlayers.map(player => ({
+                            let players = prevPlayers.map(player => ({
                                 ...player,
                                 matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
                             }))
     
-                            cards.push({ matchedPairs, username, itsMe })
+                            players.push({ matchedPairs, username, itsMe })
+
+                            console.log('joined', username, matchedPairs, itsMe, players)
     
-                            return cards
+                            return players
                         })
     
                         break
@@ -212,27 +214,12 @@ export default function Ram() {
 
     const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
 
+    console.log(players, isTurnOf)
+
     return (
         <div className="flex flex-col gap-10 justify-between h-full">
             <div className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center">
                 <h1 className="font-bold text-6xl">RAMory</h1>
-                <div className="flex flex-row gap-2 items-center">
-                { isPrivate ? 
-                    <div className="flex flex-row border px-4 py-2 rounded-xl gap-2 text-green-500 border-green-500 items-center">
-                        <LockClosedIcon className="h-4 w-4 text-green-400"/>
-                        <p className="text-sm">Private</p>
-                    </div> :
-                    <div className="flex flex-row border px-4 py-2 rounded-xl gap-2 text-red-500 items-center">
-                        <LockOpenIcon className="h-4"/>
-                        <p>Public</p>
-                    </div>
-                }
-                <Form method="post" action="/leave-ram" className="flex flex-row gap-2 items-center hover:cursor-pointer">
-                    <input hidden value={ramId} name="ramToLeave" readOnly />
-                    <button className="text-sm rounded-lg" type="submit">Leave</button>
-                    <ArrowRightIcon className="h-4"></ArrowRightIcon>
-                </Form>
-                </div>
             </div>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-5 h-full">
                 { cards.map(({ id, clicked, imageUrl, active }) => (
@@ -254,7 +241,7 @@ export default function Ram() {
                 </div>
                 <div className="flex flex-col gap">
                 { players.map(({ username, itsMe, matchedPairs }) => (
-                    <PlayerCard key={username} active={isMyTurn} myself={itsMe} username={username} matchedPairs={matchedPairs} />
+                    <PlayerCard key={username} active={isTurnOf === username} myself={itsMe} username={username} matchedPairs={matchedPairs} />
                 ))}
                 </div>
             </div>
@@ -277,6 +264,11 @@ export default function Ram() {
                         onClick={() => shareBoard()}
                         className="text-pink-500 px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-xl flex flex-row gap-2 items-center"
                     ><ClipboardIcon className="h-4"/>Copy RAM and send to friend</button>
+                    <Form method="post" action="/leave-ram" className="flex text-gray-400 flex-row gap-2 items-center hover:cursor-pointer">
+                        <input hidden value={ramId} name="ramToLeave" readOnly />
+                        <button className="text-xs rounded-lg" type="submit">Leave</button>
+                        <ArrowRightIcon className="h-4"></ArrowRightIcon>
+                    </Form>
                 </div>
                 
             </div>
