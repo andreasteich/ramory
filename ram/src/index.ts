@@ -89,8 +89,6 @@ function createTrmCards(images: string[], allowedPlayersInTotal = 1) {
     imagesToUse.push(images[i])
   }
 
-  console.log(imagesToUse, pairsInTotal)
-
   return imagesToUse
     .map<TrmCard>(image => ({
       clicked: false,
@@ -205,26 +203,18 @@ export class Ram {
           } else if (path[2] === 'join' && request.method === 'POST') {
             const { username, cookie } = await request.json()
 
-            console.log('username', username, cookie)
-
             let players = await this.state.storage.get<Player[]>('players') ?? []
             let isTurnOf = await this.state.storage.get('isTurnOf')
             
             const playerAlreadyExists = players.find(player => player.cookie === cookie)
-
-            console.log('exis', playerAlreadyExists, cookie, players)
   
             if (!playerAlreadyExists && cookie) {
               players.push({ username, cookie, matchedPairs: 0 })
             }
-
-            console.log('pla', players, isTurnOf)
   
             if (!isTurnOf) {
               isTurnOf = players[0].username
             }
-
-            console.log('pla', players[0], isTurnOf)
   
             const data = {
               isTurnOf,
@@ -234,8 +224,6 @@ export class Ram {
                 matchedPairs: player.matchedPairs 
               }))
             }
-
-            console.log('join', players, isTurnOf)
 
             await this.state.storage.put('players', players)
             await this.state.storage.put('isTurnOf', isTurnOf)
@@ -251,7 +239,6 @@ export class Ram {
         await this.state.storage.put('allowedPlayersInTotal', allowedPlayersInTotal)
         await this.state.storage.put('topic', topic)
         const deck = shuffle(createTrmCards(PAIRS, allowedPlayersInTotal))
-        console.log('deck', deck)
         await this.state.storage.put('deck', deck)
 
         return new Response(JSON.stringify({ isPrivate }))
