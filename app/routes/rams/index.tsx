@@ -5,6 +5,7 @@ import Modal from "~/components/Modal"
 import RamCard from "~/components/RamCard"
 import Toggle from "~/components/Toggle"
 import { PlusIcon } from '@heroicons/react/outline'
+import { constructUrlForDo } from "~/utils"
 
 export const loader: LoaderFunction = async ({ context, request }) => {
     const session = await context.sessionStorage.getSession(
@@ -15,43 +16,15 @@ export const loader: LoaderFunction = async ({ context, request }) => {
         return redirect('/')
     }
 
-    const response = await fetch('https://ram.ramory.workers.dev/rams')
-    const rams = await response.json()
-
     return json({
         username: session.get('username'),
-        rams
+        rams: []
     })
 } 
 
-export const action: ActionFunction = async ({ context, request }) => {
-    const cookie = request.headers.get("Cookie")
-    const session = await context.sessionStorage.getSession(cookie)
-
-    const { ramType, allowedPlayersInTotal } = Object.fromEntries(await request.formData())
-
-    console.log(ramType, allowedPlayersInTotal)
-
-    const payload = {
-        username: session.get('username'),
-        cookie,
-        isPrivate: ramType === 'private',
-        allowedPlayersInTotal
-    }
-
-    const response = await fetch('https://ram.ramory.workers.dev/rams', { 
-        method: 'POST',
-        body: JSON.stringify(payload)
-    })
-
-    const { ramId } = await response.json()
-
-    return redirect(`/rams/${ramId}`)
-}
-
 export default function Rams() {
     const { username, rams } = useLoaderData()
-    const [visible, setVisible] = useState(true)
+    const [visible, setVisible] = useState(false)
 
     return (
         <div className="flex flex-col gap-20">

@@ -6,39 +6,49 @@ import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
 import { motion } from 'framer-motion'
+import { constructUrlForDo } from "~/utils"
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
+    const { ramId } = params
+    const { env } = context
+
+    const response = await fetch(constructUrlForDo(env.DO_HOST, `rams/${ramId}`))
+
+    let data: object = await response.json()
+
     const cookie = request.headers.get("Cookie")
     const session = await context.sessionStorage.getSession(cookie);
 
-    const { ramId } = params
+    console.log('load user', cookie, session.id, session.get('username'))
 
-    const { env } = context
+    if (session && session.has('username')) {
+        const response = await fetch(constructUrlForDo(env.DO_HOST, `rams/${ramId}/join`), { 
+            body: JSON.stringify({
+                username: session.get('username'),
+                cookie
+            }),
+            method: 'POST'
+        })
 
-    const response = await fetch(`https://ram.ramory.workers.dev/rams/${ramId}`, { 
-        body: JSON.stringify({
-            username: session.get('username'),
-            cookie
-        }),
-        method: 'POST'
-    })
-
-    console.log(session, cookie)
-    const data: object = await response.json()
-
+        const { isTurnOf, players } = await response.json()
+        data = { ...data, hasSession: true, players, isTurnOf }
+    } else {
+        data = { ...data, hasSession: false }
+    }
+    
     return json({ 
         ...data,
-        hasSession: !!cookie,
-        deployUrl: env.HOST
+        doHost: env.DO_HOST
     })
 }
 
 export const action: ActionFunction = async({ params, context, request }) => {
     const { ramId } = params
-    // TODO: refactor into util, same logic from landing-page
 
     const form = await request.formData();
     const username = form.get("username");
+
+    console.log('user', username)
 
     const session = await context.sessionStorage.getSession(
         request.headers.get("Cookie")
@@ -69,7 +79,7 @@ type Reaction = {
     value: string
 }
 
-export default function Room() {
+export default function Ram() {
     const reactions: Reaction[] = [
         {
             label: '🤔',
@@ -94,17 +104,17 @@ export default function Room() {
     const { ramId } = useParams()
 
     const data = useLoaderData()
-    const { isPrivate, deck, hasSession, deployUrl, allowedPlayersInTotal } = data
+    const { isPrivate, deck, hasSession, doHost, allowedPlayersInTotal } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
-    const [players, setPlayers] = useState<Player[]>(data.players)
+    const [players, setPlayers] = useState<Player[]>(data.players ?? [])
     const [isTurnOf, setIsTurnOf] = useState<string | undefined>(data.isTurnOf)
     const [showYouWonModal, setShowYouWonModal] = useState(false)
     const [showYouLostModal, setShowYouLostModal] = useState(false)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
     useEffect(() => {
-        socket.current = new WebSocket(`wss://ram.ramory.workers.dev/websocket/${ramId}?player=${document.cookie}`)
+        socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${ramId}?player=${document.cookie}`, true))
 
         socket.current.onmessage = ({ data }) => {
             const { action, payload } = JSON.parse(data)
@@ -187,11 +197,13 @@ export default function Room() {
         socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
     }
 
+    const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
+
     return (
         <div className="flex flex-col gap-10 justify-between h-full">
-            <div className="flex flex-row justify-between items-center">
+            <div className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center">
                 <h1 className="font-bold text-6xl">RAMory</h1>
-                <div className="flex flex-row gap-5 items-center">
+                <div className="flex flex-row gap-2 items-center">
                 { isPrivate ? 
                     <div className="flex flex-row border px-4 py-2 rounded-xl gap-2 text-green-500 border-green-500 items-center">
                         <LockClosedIcon className="h-4 w-4 text-green-400"/>
@@ -214,7 +226,8 @@ export default function Room() {
                     <TrmCard 
                         key={id}
                         id={id}
-                        clicked={clicked} 
+                        clicked={clicked}
+                        isMyTurn={isMyTurn}
                         imageUrl={imageUrl}
                         active={active}
                         cardClicked={flipCard}
@@ -228,11 +241,11 @@ export default function Room() {
                 </div>
                 <div className="flex flex-col gap">
                 { players.map(({ username, itsMe, matchedPairs }) => (
-                    <PlayerCard key={username} active={isTurnOf === username} myself={itsMe} username={username} matchedPairs={matchedPairs} />
+                    <PlayerCard key={username} active={isMyTurn} myself={itsMe} username={username} matchedPairs={matchedPairs} />
                 ))}
                 </div>
             </div>
-            <div className="flex flex-row gap-5 items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-5 items-start justify-between">
                 <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
                 { reactions.map(({ label, value }) => (
                     <motion.p
