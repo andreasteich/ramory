@@ -1,43 +1,7 @@
 import { ArrowRightIcon } from "@heroicons/react/outline";
-import { ActionFunction, json, LoaderFunction, redirect, Session } from "@remix-run/cloudflare";
+import { ActionFunction, redirect } from "@remix-run/cloudflare";
 import { Form, Link } from "@remix-run/react";
 import { constructUrlForDo } from "~/utils";
-
-export const loader: LoaderFunction = async ({ context, request }) => {
-  const session = await context.sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-
-  if (session.has('username')) {
-    return redirect('/rams')
-  }
-
-  return json(null)
-}
-
-/*export const action: ActionFunction = async ({ context, request }) => {
-  const form = await request.formData();
-  const username = form.get("username");
-
-  const session = await context.sessionStorage.getSession(
-    request.headers.get("Cookie")
-  );
-
-  session.set('username', username)
-
-  /*if (session) {
-    // session.flash("error", "Invalid username/password");
-    return redirect("/rams");
-  } else {
-    
-  }
-
-  return redirect("/rams", {
-    headers: {
-      "Set-Cookie": await context.sessionStorage.commitSession(session),
-    },
-  });
-}*/
 
 export const action: ActionFunction = async ({ context, request }) => {
   const { allowedPlayersInTotal, topic } = Object.fromEntries(await request.formData())
@@ -65,7 +29,7 @@ export default function Index() {
     <div className="flex flex-col gap-20 items-center mx-auto my-0 h-full justify-center">
       <div className="flex flex-col gap-10">
         <h1 className="text-center font-bold text-6xl">RAMory</h1>
-        <h2 className="text-center font-semibold text-4xl">How much memory do you have?</h2>
+        <h2 className="text-center font-semibold text-4xl">How good is your memory?</h2>
       </div>
       <Form method="post" className="flex flex-row items-center gap-5 justify-evenly w-full">
         <div className="flex flex-col gap-2">
