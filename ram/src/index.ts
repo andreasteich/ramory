@@ -3,7 +3,7 @@ export default {
     let url = new URL(request.url);
     let path = url.pathname.slice(1).split('/');
 
-    if (path[0] === 'rams') {
+    if (path[0] === 'boards') {
       if (path[1]) {
         const doId = path[1]
 
@@ -28,7 +28,7 @@ export default {
   
         await stub.fetch(request);
   
-        return new Response(JSON.stringify({ ramId: randomString }))
+        return new Response(JSON.stringify({ boardId: randomString }))
       } else if (request.method === 'GET') {
         return new Response(JSON.stringify([]))
       }
@@ -159,10 +159,10 @@ export class Ram {
 
     switch (path[0]) {
       // TODO: would be nice to rewrite to something like /create or /new
-      case 'rams': {
-        const ramId = path[1]
+      case 'boards': {
+        const boardId = path[1]
 
-        if (ramId) {
+        if (boardId) {
           if (path[2] === 'leave' && request.method === 'DELETE') {
             const cookie = request.headers.get('Cookie')
 

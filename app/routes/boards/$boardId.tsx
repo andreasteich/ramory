@@ -9,10 +9,10 @@ import { motion } from 'framer-motion'
 import { constructUrlForDo } from "~/utils"
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
-    const { ramId } = params
+    const { boardId } = params
     const { env } = context
 
-    const response = await fetch(constructUrlForDo(env.DO_HOST, `rams/${ramId}`))
+    const response = await fetch(constructUrlForDo(env.DO_HOST, `boards/${boardId}`))
 
     let data: object = await response.json()
 
@@ -20,7 +20,7 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     const session = await context.sessionStorage.getSession(cookie);
 
     if (session && session.has('username')) {
-        const response = await fetch(constructUrlForDo(env.DO_HOST, `rams/${ramId}/join`), { 
+        const response = await fetch(constructUrlForDo(env.DO_HOST, `boards/${boardId}/join`), { 
             body: JSON.stringify({
                 username: session.get('username'),
                 cookie
@@ -41,7 +41,7 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
 }
 
 export const action: ActionFunction = async({ params, context, request }) => {
-    const { ramId } = params
+    const { boardId } = params
 
     const form = await request.formData();
     const username = form.get("username");
@@ -52,7 +52,7 @@ export const action: ActionFunction = async({ params, context, request }) => {
 
     session.set('username', username)
 
-    return redirect(`/rams/${ramId}`, {
+    return redirect(`/boards/${boardId}`, {
         headers: { "Set-Cookie": await context.sessionStorage.commitSession(session) }
     });
 }
@@ -97,7 +97,7 @@ export default function Ram() {
 
     const socket = useRef<WebSocket>()
 
-    const { ramId } = useParams()
+    const { boardId } = useParams()
 
     const data = useLoaderData()
     const { isPrivate, deck, hasSession, doHost, allowedPlayersInTotal } = data
@@ -111,7 +111,7 @@ export default function Ram() {
 
     if (hasSession) {
         useEffect(() => {
-            socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${ramId}?player=${document.cookie}`, true))
+            socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
     
             socket.current.onmessage = ({ data }) => {
                 const { action, payload } = JSON.parse(data)
@@ -237,7 +237,7 @@ export default function Ram() {
                 ))}
                 </div>
             </div>
-            <div className="flex flex-col md:flex-row gap-5 items-start justify-between">
+            <div className="flex flex-col md:flex-row gap-10 items-start justify-between">
                 <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
                 { reactions.map(({ label, value }) => (
                     <motion.p
@@ -251,13 +251,13 @@ export default function Ram() {
                     >{label}</motion.p>
                 ))}
                 </div>
-                <div className="flex flex-row gap-5">
+                <div className="flex flex-col md:flex-row gap-2 items-start w-full mb-5">
                     <button 
                         onClick={() => shareBoard()}
                         className="text-pink-500 px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-xl flex flex-row gap-2 items-center"
-                    ><ClipboardIcon className="h-4"/>Copy RAM and send to friend</button>
-                    <Form method="post" action="/leave-ram" className="flex text-gray-400 flex-row gap-2 items-center hover:cursor-pointer">
-                        <input hidden value={ramId} name="ramToLeave" readOnly />
+                    ><ClipboardIcon className="h-4"/>Send board to friend</button>
+                    <Form method="post" action="/leave-ram" className="flex text-gray-400 px-4 py-2 flex-row gap-2 items-center hover:cursor-pointer">
+                        <input hidden value={boardId} name="ramToLeave" readOnly />
                         <button className="text-xs rounded-lg" type="submit">Leave</button>
                         <ArrowRightIcon className="h-4"></ArrowRightIcon>
                     </Form>

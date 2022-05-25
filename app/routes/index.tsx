@@ -1,6 +1,6 @@
 import { ArrowRightIcon } from "@heroicons/react/outline";
 import { ActionFunction, redirect } from "@remix-run/cloudflare";
-import { Form, Link } from "@remix-run/react";
+import { Form } from "@remix-run/react";
 import { constructUrlForDo } from "~/utils";
 
 export const action: ActionFunction = async ({ context, request }) => {
@@ -14,14 +14,14 @@ export const action: ActionFunction = async ({ context, request }) => {
 
   const { env } = context
 
-  const response = await fetch(constructUrlForDo(env.DO_HOST, 'rams'), { 
+  const response = await fetch(constructUrlForDo(env.DO_HOST, 'boards'), { 
       method: 'POST',
       body: JSON.stringify(payload)
   })
 
-  const { ramId } = await response.json()
+  const { boardId } = await response.json()
 
-  return redirect(`/rams/${ramId}`)
+  return redirect(`/boards/${boardId}`)
 }
 
 export default function Index() {
@@ -29,7 +29,7 @@ export default function Index() {
     <div className="flex flex-col gap-20 items-center mx-auto my-0 h-full justify-center">
       <div className="flex flex-col gap-10">
         <h1 className="text-center font-bold text-6xl">RAMory</h1>
-        <h2 className="text-center font-semibold text-4xl">How good is your memory?</h2>
+        <h2 className="text-center font-semibold text-4xl">How good is your card's memory?</h2>
       </div>
       <Form method="post" className="flex flex-row items-center gap-5 justify-evenly w-full">
         <div className="flex flex-col gap-2">

@@ -7,5 +7,5 @@ export const action: ActionFunction = async ({ context, request }) => {
 
     await context.sessionStorage.destroySession(session)
 
-    return redirect('/rams')
+    return redirect('/boards')
 }

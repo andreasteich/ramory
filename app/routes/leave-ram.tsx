@@ -13,7 +13,7 @@ export const action: ActionFunction = async ({ context, request }) => {
     
     if (!cookie) { return json(null) }
 
-    await fetch(constructUrlForDo(env.DO_HOST, `rams/${ramToLeave}/leave`), {
+    await fetch(constructUrlForDo(env.DO_HOST, `boards/${ramToLeave}/leave`), {
         method: 'DELETE',
         headers: {
             'Cookie': cookie

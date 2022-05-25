@@ -1,11 +1,10 @@
-import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
-import { Form, Link, useLoaderData } from "@remix-run/react"
+import { json, LoaderFunction, redirect } from "@remix-run/cloudflare"
+import { Form, useLoaderData } from "@remix-run/react"
 import { useState } from "react"
 import Modal from "~/components/Modal"
 import RamCard from "~/components/RamCard"
 import Toggle from "~/components/Toggle"
 import { PlusIcon } from '@heroicons/react/outline'
-import { constructUrlForDo } from "~/utils"
 
 export const loader: LoaderFunction = async ({ context, request }) => {
     const session = await context.sessionStorage.getSession(
@@ -18,12 +17,12 @@ export const loader: LoaderFunction = async ({ context, request }) => {
 
     return json({
         username: session.get('username'),
-        rams: []
+        boards: []
     })
 } 
 
-export default function Rams() {
-    const { username, rams } = useLoaderData()
+export default function boards() {
+    const { username, boards } = useLoaderData()
     const [visible, setVisible] = useState(false)
 
     return (
@@ -39,19 +38,19 @@ export default function Rams() {
             </div>
             <div className="flex flex-col gap-10">
                 <div className="flex flex-row justify-between">
-                    <h1 className="text-4xl">Public Rams</h1>
+                    <h1 className="text-4xl">Public boards</h1>
                     <button 
                         onClick={() => setVisible(true)}
                         className="px-4 py-2 bg-gray-200 text-pink-500 hover:bg-gray-300 rounded-lg flex flex-row gap-2 items-center"
                     ><PlusIcon className="h-4" /> Create Ram</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-                    { rams.length ? 
-                        rams.map(ram => (
+                    { boards.length ? 
+                        boards.map(ram => (
                             <RamCard key={ram.id} {...ram} />
                         )) :
                         <div>
-                            <p>No public rams available, create the first one!</p>
+                            <p>No public boards available, create the first one!</p>
                         </div>
                     }
                     
