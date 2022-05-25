@@ -1,7 +1,3 @@
-import React, { ReactNode } from "react";
-import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
-
-
 export default {
   async fetch(request, env) {
     let url = new URL(request.url);
@@ -18,8 +14,6 @@ export default {
           const response = await stub.fetch(request)
           const { ramToDelete } = await response.json()
 
-          await env.RAM_REFS.delete(doId)
-
           return new Response(null, { status: 200 })
         }
 
@@ -32,24 +26,14 @@ export default {
         let id = env.RAM.idFromName(randomString)
         let stub = env.RAM.get(id);
   
-        const response = await stub.fetch(request);
-        const { isPrivate } = await response.json()
-
-        if (!isPrivate) {
-          // await env.RAM_REFS.put(randomString, 'RAM_REF')
-        } 
+        await stub.fetch(request);
   
         return new Response(JSON.stringify({ ramId: randomString }))
       } else if (request.method === 'GET') {
-        //const list = await env.RAM_REFS.list()
-        const list = []
-
-        return new Response(JSON.stringify(list))
+        return new Response(JSON.stringify([]))
       }
       
     } else if (path[0] === 'websocket') {
-      console.log('in worker', request.headers.get('Cookie'))
-
       let id = env.RAM.idFromName(path[1])
       let stub = env.RAM.get(id);
 
@@ -76,7 +60,7 @@ type TrmCard = {
   active: boolean
 }
 
-const PAIRS: string[] = ['🫐', '🫒', '🍕', '🥩', '🫑', '🥥', '🧄', '🥖', '🥫']
+const PAIRS: string[] = ['🫐', '🫒', '🍕', '🥩', '🫑', '🥥', '🧄', '🥖', '🥫', '🥕', '🍟', '🍇']
 
 function shuffle(array: TrmCard[]) {
   let counter = array.length;
@@ -94,8 +78,20 @@ function shuffle(array: TrmCard[]) {
   return array;
 }
 
-function createTrmCards(images: string[]) {
-  return images
+function createTrmCards(images: string[], allowedPlayersInTotal = 1) {
+  let defaultPairCount = 6
+
+  const pairsInTotal = defaultPairCount + 2 * allowedPlayersInTotal
+
+  const imagesToUse = []
+
+  for (let i = 0; i < pairsInTotal; i++) {
+    imagesToUse.push(images[i])
+  }
+
+  console.log(imagesToUse, pairsInTotal)
+
+  return imagesToUse
     .map<TrmCard>(image => ({
       clicked: false,
       imageUrl: image,
@@ -106,12 +102,7 @@ function createTrmCards(images: string[]) {
 }
 
 export class Ram {
-  allowedPlayersInTotal = 2
-  isPrivate = true
-  totalPairs = 6
-  players: Player[] = []
-  deck: TrmCard[] = shuffle(createTrmCards(PAIRS))
-  isTurnOf: string | undefined
+  connections: { cookie: string, server: WebSocket }[] = []
 
   state: DurableObjectState
   env: any
@@ -122,9 +113,9 @@ export class Ram {
   }
 
   async fetch(request: Request) {
-    let headersObject = Object.fromEntries(request.headers)
+    /*let headersObject = Object.fromEntries(request.headers)
     let requestHeaders = JSON.stringify(headersObject, null, 2)
-    console.log(`Request headers: ${requestHeaders}`)
+    console.log(`Request headers: ${requestHeaders}`)*/
 
     let url = new URL(request.url);
     let path = url.pathname.slice(1).split('/');
@@ -136,19 +127,25 @@ export class Ram {
 
       const cookie = request.url.split('?')[1].split('player=')[1]
 
-      console.log('value', cookie)
-
-      const ip = request.headers.get("CF-Connecting-IP");
-
-      const [client, server] = Object.values(new WebSocketPair());
-
-      const player = this.players.find(player => player.cookie === cookie)
+      const players = await this.state.storage.get<Player[]>('players') ?? []
+      const player = players.find(player => player.cookie === cookie)
 
       if (!player) {
         return new Response('You have to have a sesseion!', {status: 400});
       }
 
-      await this.handleSession(player, server, ip)
+      const [client, server] = Object.values(new WebSocketPair());
+
+      const connectionAlreadyEstablished = this.connections.find(connection => connection.cookie = cookie)
+
+      if (connectionAlreadyEstablished) {
+        connectionAlreadyEstablished.server = server 
+      } else {
+        this.connections.push({ cookie, server })
+      }
+      
+      await this.handleSession(server, '')
+      
       
       // TODO: test without access-control-allow-origin header (security risk?)
       const headers = new Headers()
@@ -167,50 +164,81 @@ export class Ram {
           if (path[2] === 'leave' && request.method === 'DELETE') {
             const cookie = request.headers.get('Cookie')
 
-            const playerToRemove = { ...this.players.find(player => player.cookie === cookie) }
+            let players = await this.state.storage.get<Player[]>('players') ?? []
+
+            const playerToRemove = { ...players.find(player => player.cookie === cookie) }
 
             if (!playerToRemove) {
               return new Response('Something went wrong, contact the developers')
             }
             
-            this.players = this.players.filter(player => player.cookie !== cookie)
+            players = players.filter(player => player.cookie !== cookie)
+            
+            if (!players.length) {
+              await this.state.storage.deleteAll()
+              return new Response('No players, RAM destroyed.')
+            }
+
+            await this.state.storage.put('players', players)
 
             this.broadcast({ action: 'playerLeft', payload: playerToRemove.username })
 
-            let ramToDelete = false
-
-            if (!this.players.length) {
-              this.state.storage.deleteAll()
-              ramToDelete = true
-            }
-
-            return new Response(JSON.stringify({ ramToDelete }))
+            return new Response('Player left ' + playerToRemove.username)
           }
 
-          if (request.method === 'POST') {
+          if (request.method === 'GET') {
+            const allowedPlayersInTotal = await this.state.storage.get('allowedPlayersInTotal')
+            const deck = await this.state.storage.get<TrmCard[]>('deck')
+
+            let players = await this.state.storage.get<Player[]>('players') ?? []
+            let isTurnOf = await this.state.storage.get('isTurnOf')
+        
+            const data = {
+              allowedPlayersInTotal,
+              isPrivate: true,
+              isTurnOf,
+              players,
+              deck
+            }
+  
+            return new Response(JSON.stringify(data))
+          } else if (path[2] === 'join' && request.method === 'POST') {
             const { username, cookie } = await request.json()
 
-            const playerAlreadyExists = this.players.find(player => player.cookie === cookie)
+            console.log('username', username, cookie)
+
+            let players = await this.state.storage.get<Player[]>('players') ?? []
+            let isTurnOf = await this.state.storage.get('isTurnOf')
+            
+            const playerAlreadyExists = players.find(player => player.cookie === cookie)
+
+            console.log('exis', playerAlreadyExists, cookie, players)
   
             if (!playerAlreadyExists && cookie) {
-              this.players.push({ username, cookie, matchedPairs: 0 })
+              players.push({ username, cookie, matchedPairs: 0 })
             }
+
+            console.log('pla', players, isTurnOf)
   
-            if (!this.isTurnOf) {
-              this.isTurnOf = this.players[0].username
+            if (!isTurnOf) {
+              isTurnOf = players[0].username
             }
+
+            console.log('pla', players[0], isTurnOf)
   
             const data = {
-              allowedPlayersInTotal: this.allowedPlayersInTotal,
-              isPrivate: this.isPrivate,
-              isTurnOf: this.isTurnOf,
-              players: this.players.map(player => ({ 
+              isTurnOf,
+              players: players.map(player => ({ 
                 username: player.username, 
                 itsMe: player.cookie === cookie, 
                 matchedPairs: player.matchedPairs 
-              })),
-              deck: this.deck
+              }))
             }
+
+            console.log('join', players, isTurnOf)
+
+            await this.state.storage.put('players', players)
+            await this.state.storage.put('isTurnOf', isTurnOf)
 
             this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, itsMe: false } })
   
@@ -218,11 +246,13 @@ export class Ram {
           }
         }
 
-        const { isPrivate, allowedPlayersInTotal } = await request.json()
+        const { isPrivate, allowedPlayersInTotal, topic } = await request.json()
 
-        this.allowedPlayersInTotal = allowedPlayersInTotal
-
-        this.isPrivate = isPrivate
+        await this.state.storage.put('allowedPlayersInTotal', allowedPlayersInTotal)
+        await this.state.storage.put('topic', topic)
+        const deck = shuffle(createTrmCards(PAIRS, allowedPlayersInTotal))
+        console.log('deck', deck)
+        await this.state.storage.put('deck', deck)
 
         return new Response(JSON.stringify({ isPrivate }))
       }
@@ -232,88 +262,98 @@ export class Ram {
     }
   }
 
-  private broadcast(action: any, exceptPlayerWithUsername: string | undefined = undefined) {
-    this.players.forEach(player => {
-      if (player.username === exceptPlayerWithUsername) {
+  private async broadcast(action: any, exceptPlayerWithCookie: string | undefined = undefined) {
+    this.connections.forEach(({ cookie, server }) => {
+      if (cookie === exceptPlayerWithCookie) {
         return
       }
 
-      player.websocket?.send(JSON.stringify(action))
+      server.send(JSON.stringify(action))
     })
   }
 
-  async handleSession(player: Player, webSocket: any, ip: string) {
+  async handleSession(webSocket: any, ip: string) {
     webSocket.accept();
 
-    player.websocket = webSocket
-
-    webSocket.onmessage = ({ data }) => {
+    webSocket.addEventListener('message', async ({ data }) => {
       try {
         const { action, payload } = JSON.parse(data)
 
         switch (action) {
           case 'flipCard':
-            this.deck.forEach(card => {
+            let deck = await this.state.storage.get<TrmCard[]>('deck') ?? []
+
+            deck.forEach(card => {
               if (card.id === payload) {
                 card.clicked = !card.clicked
               }
             })
 
-            const clickedCards = this.deck.filter(card => card.clicked)
+            const clickedCards = deck.filter(card => card.clicked)
+
+            let players = await this.state.storage.get<Player[]>('players') ?? []
 
             if (clickedCards.length === 2) {
-                setTimeout(() => {
-                  if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
-                    this.broadcast({ action: 'pairFound', payload: [clickedCards[0].id, clickedCards[1].id] })
+              setTimeout(async () => {
+                let isTurnOf = await this.state.storage.get<string>('isTurnOf')
 
-                    const playerToAdjust = this.players.find(player => player.username === this.isTurnOf)
+                if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
+                  this.broadcast({ action: 'pairFound', payload: [clickedCards[0].id, clickedCards[1].id] })
 
-                    // TODO: throw error
-                    if (!playerToAdjust) {
-                      console.error('Not possible?!')
-                      return
-                    }
+                  const playerToAdjust = players.find(player => player.username === isTurnOf)
 
-                    playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
-                    this.broadcast({ action: 'incrementPairsOfPlayer', payload: playerToAdjust.username })
-
-                    clickedCards[0].active = false
-                    clickedCards[1].active = false
-
-                    const allPairsFound = !this.deck.find(card => card.active)
-                    
-                    if (allPairsFound) {
-                      const winner = this.players.reduce((previousPlayer, currentPlayer) => {
-                        if (previousPlayer.matchedPairs > currentPlayer.matchedPairs) {
-                          return previousPlayer
-                        } else {
-                          return currentPlayer
-                        }
-                      })
-
-                      const { username, websocket } = winner
-                      
-                      this.broadcast({ action: 'youLost' }, username)
-                      websocket?.send(JSON.stringify({ action: 'youWon' }))
-                    }
-                  } else {
-                    const currentPlayersIndex = this.players.findIndex(player => player.username === this.isTurnOf)
-                    
-                    try {
-                      this.isTurnOf = this.players[currentPlayersIndex + 1].username
-                    } catch(e) {
-                      this.isTurnOf = this.players[0].username
-                    }
-
-                    this.broadcast({ action: 'noMatch' })
-                    this.broadcast({ action: 'isTurnOf', payload: this.isTurnOf })
+                  // TODO: throw error
+                  if (!playerToAdjust) {
+                    console.error('Not possible?!')
+                    return
                   }
 
-                  this.deck.forEach(card => card.clicked = false)
-                }, 1000)
+                  playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
+                  this.broadcast({ action: 'incrementPairsOfPlayer', payload: playerToAdjust.username })
+
+                  clickedCards[0].active = false
+                  clickedCards[1].active = false
+
+                  const allPairsFound = deck.find(card => card.active)
+                  
+                  if (allPairsFound) {
+                    const winner = players.reduce((previousPlayer, currentPlayer) => {
+                      if (previousPlayer.matchedPairs > currentPlayer.matchedPairs) {
+                        return previousPlayer
+                      } else {
+                        return currentPlayer
+                      }
+                    })
+
+                    const { username, websocket } = winner
+                    
+                    this.broadcast(players, { action: 'youLost' }, username)
+                    websocket?.send(JSON.stringify({ action: 'youWon' }))
+                  }
+                } else {
+                  const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
+                  
+                  try {
+                    isTurnOf = players[currentPlayersIndex + 1].username
+                  } catch(e) {
+                    isTurnOf = players[0].username
+                  }
+
+                  this.broadcast({ action: 'noMatch' })
+                  this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
+                }
+
+                deck.forEach(card => card.clicked = false)
+
+                await this.state.storage.put('deck', deck)
+                await this.state.storage.put('players', players)
+                await this.state.storage.put('isTurnOf', isTurnOf)
+              }, 1000)
             }
 
             this.broadcast({ action: 'flipCard', payload })
+
+            this.state.storage.put('deck', deck)
             break;
         }
         
@@ -322,6 +362,7 @@ export class Ram {
         // probably isn't what you'd want to do in production, but it's convenient when testing.
         webSocket.send(JSON.stringify({error: err.stack}));
       }
-    };
+    })
+
   }
 }

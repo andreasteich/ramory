@@ -1,5 +1,7 @@
+import { ArrowRightIcon } from "@heroicons/react/outline";
 import { ActionFunction, json, LoaderFunction, redirect, Session } from "@remix-run/cloudflare";
 import { Form, Link } from "@remix-run/react";
+import { constructUrlForDo } from "~/utils";
 
 export const loader: LoaderFunction = async ({ context, request }) => {
   const session = await context.sessionStorage.getSession(
@@ -13,7 +15,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
   return json(null)
 }
 
-export const action: ActionFunction = async ({ context, request }) => {
+/*export const action: ActionFunction = async ({ context, request }) => {
   const form = await request.formData();
   const username = form.get("username");
 
@@ -28,13 +30,34 @@ export const action: ActionFunction = async ({ context, request }) => {
     return redirect("/rams");
   } else {
     
-  }*/
+  }
 
   return redirect("/rams", {
     headers: {
       "Set-Cookie": await context.sessionStorage.commitSession(session),
     },
   });
+}*/
+
+export const action: ActionFunction = async ({ context, request }) => {
+  const { allowedPlayersInTotal, topic } = Object.fromEntries(await request.formData())
+
+  const payload = {
+      isPrivate: true,
+      allowedPlayersInTotal,
+      topic
+  }
+
+  const { env } = context
+
+  const response = await fetch(constructUrlForDo(env.DO_HOST, 'rams'), { 
+      method: 'POST',
+      body: JSON.stringify(payload)
+  })
+
+  const { ramId } = await response.json()
+
+  return redirect(`/rams/${ramId}`)
 }
 
 export default function Index() {
@@ -44,9 +67,24 @@ export default function Index() {
         <h1 className="text-center font-bold text-6xl">RAMory</h1>
         <h2 className="text-center font-semibold text-4xl">How much memory do you have?</h2>
       </div>
-      <Form method="post" className="flex flex-col items-center gap-5">
-        <input type="text" placeholder="Enter username" name="username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
-        <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's find out</button>
+      <Form method="post" className="flex flex-row items-center gap-5 justify-evenly w-full">
+        <div className="flex flex-col gap-2">
+          <p className="font-semibold text-sm">How many Players?</p>
+          <input type="number" min="1" max="10" placeholder="1-10" className="" name="allowedPlayersInTotal" required />
+        </div> 
+        <div className="flex flex-col gap-2">
+          <p className="font-semibold text-sm">Topic</p>
+          <div className="flex flex-row gap-1 items-center">
+            <input type="radio" id="fruits" name="topic" value="fruits" defaultChecked />
+            <label htmlFor="fruits">Fruits</label>
+          </div>
+        </div>
+        <div>
+          <button type="submit" className="flex flex-row gap-2 items-center py-2 px-4 text-center bg-pink-500 hover:bg-pink-600 text-white rounded-lg">
+            Let's find out
+            <ArrowRightIcon className="h-4" />
+          </button>
+        </div>
       </Form>
     </div>
   );
