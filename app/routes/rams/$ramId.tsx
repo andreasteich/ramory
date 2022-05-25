@@ -19,8 +19,6 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     const cookie = request.headers.get("Cookie")
     const session = await context.sessionStorage.getSession(cookie);
 
-    console.log('load user', cookie, session.id, session.get('username'))
-
     if (session && session.has('username')) {
         const response = await fetch(constructUrlForDo(env.DO_HOST, `rams/${ramId}/join`), { 
             body: JSON.stringify({
@@ -47,8 +45,6 @@ export const action: ActionFunction = async({ params, context, request }) => {
 
     const form = await request.formData();
     const username = form.get("username");
-
-    console.log('user', username)
 
     const session = await context.sessionStorage.getSession(
         request.headers.get("Cookie")
@@ -184,8 +180,6 @@ export default function Ram() {
                             }))
     
                             players.push({ matchedPairs, username, itsMe })
-
-                            console.log('joined', username, matchedPairs, itsMe, players)
     
                             return players
                         })
@@ -213,8 +207,6 @@ export default function Ram() {
     }
 
     const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
-
-    console.log(players, isTurnOf)
 
     return (
         <div className="flex flex-col gap-10 justify-between h-full">
