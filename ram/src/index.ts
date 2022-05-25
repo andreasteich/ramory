@@ -134,13 +134,17 @@ export class Ram {
 
       const [client, server] = Object.values(new WebSocketPair());
 
-      const connectionAlreadyEstablished = this.connections.find(connection => connection.cookie = cookie)
+      const connectionAlreadyEstablished = this.connections.find(connection => connection.cookie === cookie)
 
       if (connectionAlreadyEstablished) {
+        console.log('already here', connectionAlreadyEstablished)
         connectionAlreadyEstablished.server = server 
       } else {
+        console.log('new added', cookie)
         this.connections.push({ cookie, server })
       }
+
+      console.log('connectinos', this.connections)
       
       await this.handleSession(server)
       
@@ -210,6 +214,7 @@ export class Ram {
   
             if (!playerAlreadyExists && cookie) {
               players.push({ username, cookie, matchedPairs: 0 })
+              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, itsMe: false } })
             }
   
             if (!isTurnOf) {
@@ -227,8 +232,6 @@ export class Ram {
 
             await this.state.storage.put('players', players)
             await this.state.storage.put('isTurnOf', isTurnOf)
-
-            this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, itsMe: false } })
   
             return new Response(JSON.stringify(data))
           }
