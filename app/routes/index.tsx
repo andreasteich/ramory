@@ -1,6 +1,7 @@
 import { ArrowRightIcon } from "@heroicons/react/outline";
 import { ActionFunction, redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
+import Toast from "~/components/Toast";
 import { constructUrlForDo } from "~/utils";
 
 export const action: ActionFunction = async ({ context, request }) => {
@@ -29,6 +30,7 @@ export default function Index() {
     <div className="flex flex-col gap-20 items-center mx-auto my-0 h-full justify-center">
       <div className="flex flex-col gap-10">
         <h1 className="text-center font-bold text-6xl">RAMory</h1>
+<Toast message="Hello World"/>        
         <h2 className="text-center font-semibold text-4xl">How good is your card's memory?</h2>
       </div>
       <Form method="post" className="flex flex-row items-center gap-5 justify-evenly w-full">
