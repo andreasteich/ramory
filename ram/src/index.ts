@@ -136,14 +136,10 @@ export class Ram {
       const connectionAlreadyEstablished = this.connections.find(connection => connection.cookie === cookie)
 
       if (connectionAlreadyEstablished) {
-        console.log('already here', connectionAlreadyEstablished)
         connectionAlreadyEstablished.server = server 
       } else {
-        console.log('new added', cookie)
         this.connections.push({ cookie, server })
       }
-
-      console.log('connectinos', this.connections)
       
       await this.handleSession(server)
       
