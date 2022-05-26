@@ -237,7 +237,7 @@ export default function Board() {
                 ))}
                 </div>
             </div>
-            <div className="flex flex-col md:flex-row gap-10 items-start justify-between">
+            <div className="flex flex-col md:flex-row gap-10 items-start md:items-center md:justify-between">
                 <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
                 { reactions.map(({ label, value }) => (
                     <motion.p
@@ -251,7 +251,7 @@ export default function Board() {
                     >{label}</motion.p>
                 ))}
                 </div>
-                <div className="flex flex-col md:flex-row gap-2 items-start w-full mb-5">
+                <div className="flex flex-col md:flex-row gap-2 items-start md:items-center">
                     <button 
                         onClick={() => shareBoard()}
                         className="text-pink-500 px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-xl flex flex-row gap-2 items-center"
