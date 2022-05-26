@@ -11,8 +11,7 @@ export default {
         let stub = env.RAM.get(id);
 
         if (path[2] === 'leave' && request.method === 'DELETE') {
-          const response = await stub.fetch(request)
-          const { ramToDelete } = await response.json()
+          await stub.fetch(request)
 
           return new Response(null, { status: 200 })
         }
@@ -166,8 +165,9 @@ export class Ram {
           if (path[2] === 'leave' && request.method === 'DELETE') {
             const cookie = request.headers.get('Cookie')
 
-            let players = await this.state.storage.get<Player[]>('players') ?? []
+            this.connections = this.connections.filter(connection => connection.cookie !== cookie)
 
+            let players = await this.state.storage.get<Player[]>('players') ?? []
             const playerToRemove = { ...players.find(player => player.cookie === cookie) }
 
             if (!playerToRemove) {
@@ -178,11 +178,10 @@ export class Ram {
             
             if (!players.length) {
               await this.state.storage.deleteAll()
-              return new Response('No players, RAM destroyed.')
+              return new Response('No players, board destroyed.')
             }
 
             await this.state.storage.put('players', players)
-
             this.broadcast({ action: 'playerLeft', payload: playerToRemove.username })
 
             return new Response('Player left ' + playerToRemove.username)
