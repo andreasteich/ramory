@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useRef, useState } from "react"
 import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
+import { useSubmit } from "@remix-run/react";
 import { motion } from 'framer-motion'
 import { constructUrlForDo } from "~/utils"
 
@@ -98,6 +99,7 @@ export default function Board() {
     const socket = useRef<WebSocket>()
 
     const { boardId } = useParams()
+    const submit = useSubmit();
 
     const data = useLoaderData()
     const { isPrivate, deck, hasSession, doHost, allowedPlayersInTotal } = data
@@ -109,10 +111,23 @@ export default function Board() {
     const [showYouLostModal, setShowYouLostModal] = useState(false)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
-    if (hasSession) {
-        useEffect(() => {
+    useEffect(() => {
+        window.addEventListener("beforeunload", (ev) => { 
+            ev.preventDefault();
+
+            // TODO: throw error
+            if (!boardId) { return }
+
+            const formData = new FormData()
+            formData.append('ramToLeave', boardId)
+
+            submit(formData, { method: "post", action: "/leave-ram" });
+            return ev.returnValue = 'Sure?'
+        });
+
+        if (hasSession) {
             socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
-    
+
             socket.current.onmessage = ({ data }) => {
                 const { action, payload } = JSON.parse(data)
                 
@@ -188,9 +203,8 @@ export default function Board() {
                 }
     
             }
-        }, [])
-    }
-    
+        }
+    }, [])
 
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
 
