@@ -37,12 +37,31 @@ export default function Index() {
         <div className="flex flex-col gap-2">
           <p className="font-semibold text-sm">How many Players?</p>
           <input type="number" min="1" max="10" placeholder="1-10" className="" name="allowedPlayersInTotal" required />
-        </div> 
+        </div>
         <div className="flex flex-col gap-2">
-          <p className="font-semibold text-sm">Topic</p>
-          <div className="flex flex-row gap-1 items-center">
-            <input type="radio" id="fruits" name="topic" value="fruits" defaultChecked />
-            <label htmlFor="fruits">Fruits</label>
+          <p className="font-bold text-sm">Topic</p>
+          <div className="flex flex-col gap-1 items-start">
+            <div/>
+            <div>
+            <input type="radio" id="animals" name="topic" value="animals"/>
+            <label htmlFor="animals"> Animals</label>
+            </div>
+            <div>
+            <input type="radio" id="flags" name="topic" value="flags"/>
+            <label htmlFor="flags"> Flags</label>
+            </div>
+            <div>
+            <input type="radio" id="fruits" name="topic" value="fruits"/>
+            <label htmlFor="fruits"> Food</label>
+            </div>
+            <div>
+            <input type="radio" id="sports" name="topic" value="sports"/>
+            <label htmlFor="sports"> Sports</label>
+            </div>
+            <div>
+            <input type="radio" id="vehicles" name="topic" value="vehicles"/>
+            <label htmlFor="vehicles"> Vehicles</label>
+            </div>
           </div>
         </div>
         <div>
