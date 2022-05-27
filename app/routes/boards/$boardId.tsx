@@ -1,7 +1,7 @@
 import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
 import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
 import { Form, useLoaderData, useParams } from "@remix-run/react"
-import { ReactNode, useEffect, useRef, useState } from "react"
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
@@ -95,6 +95,10 @@ export default function Board() {
         {
             label: '🤗',
             value: 'hugs'
+        },
+        {
+            label: '🙋🏻‍♂️',
+            value: 'hello'
         }
     ]
 
@@ -115,18 +119,20 @@ export default function Board() {
 
     useEffect(() => {
         if (hasSession) {
-            window.addEventListener("beforeunload", (ev) => { 
-                ev.preventDefault();
-    
-                // TODO: throw error
-                if (!boardId) { return }
-    
-                const formData = new FormData()
-                formData.append('ramToLeave', boardId)
-    
-                submit(formData, { method: "post", action: "/leave-ram" });
-                return ev.returnValue = 'Sure?'
-            });
+            if (process.env.NODE_ENV === 'production') {
+                window.addEventListener("beforeunload", (ev) => { 
+                    ev.preventDefault();
+        
+                    // TODO: throw error
+                    if (!boardId) { return }
+        
+                    const formData = new FormData()
+                    formData.append('ramToLeave', boardId)
+        
+                    submit(formData, { method: "post", action: "/leave-ram" });
+                    return ev.returnValue = 'Sure?'
+                });
+            }
 
             socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
 
@@ -148,6 +154,9 @@ export default function Board() {
                         })
                         break
     
+                    case 'quickReaction':
+                        addToast(payload)
+                        break
                     case 'pairFound':
                         setCards(prevCards => {
                             let cards = prevCards.map(card => ({
@@ -223,6 +232,11 @@ export default function Board() {
 
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
 
+    const sendQuickReaction = (payload: string) => {
+        socket.current?.send(JSON.stringify({ action: 'quickReaction', payload })) 
+        console.log('send')
+    }
+
     const shareBoard = async () => {
         try {
             await navigator.share({
@@ -271,6 +285,7 @@ export default function Board() {
                 { reactions.map(({ label, value }) => (
                     <motion.p
                         key={value}
+                        onClick={() => sendQuickReaction(value)}
                         className="hover:cursor-pointer"
                         whileHover={{
                             scale: 1.2,
