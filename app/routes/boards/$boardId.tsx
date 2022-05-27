@@ -75,7 +75,7 @@ type Reaction = {
     value: string
 }
 
-export default function Ram() {
+export default function Board() {
     const reactions: Reaction[] = [
         {
             label: '🤔',
