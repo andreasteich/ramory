@@ -264,6 +264,34 @@ export class Ram {
         const { action, payload } = JSON.parse(data)
 
         switch (action) {
+          case 'quickReaction':
+            const cookie = this.connections.find(connection => connection.server === webSocket)?.cookie
+            const players1 = await this.state.storage.get<Player[]>('players') ?? []
+            const username = players1.find(player => player.cookie === cookie)?.username
+
+            let reaction = username
+
+            switch (payload) {
+              case 'nerdy':
+                reaction = reaction + ' feels nerdy 🥸'
+                break
+              case 'hugs':
+                reaction = reaction + ' loves you all 🤗'
+                break
+              case 'thinking':
+                reaction = reaction + ' is thinking really hard 🤔'
+                break
+              case 'hello':
+                reaction = reaction + ' says hello 🙋🏻‍♂️'
+                break
+              case 'party':
+                reaction = reaction + ' wants to party 🥳'
+                break
+            }
+
+            this.broadcast({ action: 'quickReaction', payload: reaction })
+
+            break
           case 'flipCard':
             let deck = await this.state.storage.get<TrmCard[]>('deck') ?? []
 
