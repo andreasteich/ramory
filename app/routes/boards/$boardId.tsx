@@ -8,6 +8,7 @@ import TrmCard from "~/components/TrmCard"
 import { useSubmit } from "@remix-run/react";
 import { motion } from 'framer-motion'
 import { constructUrlForDo } from "~/utils"
+import { useToast } from "~/contexts/ToastContext"
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -77,6 +78,7 @@ type Reaction = {
 }
 
 export default function Board() {
+    const { addToast } = useToast()
     const reactions: Reaction[] = [
         {
             label: '🤔',
@@ -112,20 +114,20 @@ export default function Board() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
 
     useEffect(() => {
-        window.addEventListener("beforeunload", (ev) => { 
-            ev.preventDefault();
-
-            // TODO: throw error
-            if (!boardId) { return }
-
-            const formData = new FormData()
-            formData.append('ramToLeave', boardId)
-
-            submit(formData, { method: "post", action: "/leave-ram" });
-            return ev.returnValue = 'Sure?'
-        });
-
         if (hasSession) {
+            window.addEventListener("beforeunload", (ev) => { 
+                ev.preventDefault();
+    
+                // TODO: throw error
+                if (!boardId) { return }
+    
+                const formData = new FormData()
+                formData.append('ramToLeave', boardId)
+    
+                submit(formData, { method: "post", action: "/leave-ram" });
+                return ev.returnValue = 'Sure?'
+            });
+
             socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
 
             socket.current.onmessage = ({ data }) => {
@@ -156,6 +158,8 @@ export default function Board() {
     
                             return cards
                         })
+                        addToast(`Pair found`)
+
                         break
     
                     case 'isTurnOf':
@@ -198,6 +202,17 @@ export default function Board() {
     
                             return players
                         })
+                        addToast(`${username} joined the board 🤙🏻`)
+    
+                        break
+
+                    case 'playerLeft':
+                        setPlayers(prevPlayers => {
+                            let players = prevPlayers.filter(player => player.username !== payload)
+    
+                            return players
+                        })
+                        addToast(`${payload} left the board 👎🏻`)
     
                         break
                 }
