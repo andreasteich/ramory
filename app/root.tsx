@@ -7,6 +7,8 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import ToastContainer from "./components/ToastContainer";
+import ToastProvider from "./contexts/ToastContext";
 import styles from "./tailwind.css";
 
 export const meta: MetaFunction = () => ({
@@ -27,7 +29,9 @@ export default function App() {
         <Links />
       </head>
       <body className="lg:w-[1024px] my-0 mx-auto lg:py-10 p-5 h-full">
-        <Outlet />
+        <ToastProvider>
+          <Outlet />
+        </ToastProvider>
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
