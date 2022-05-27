@@ -6,9 +6,9 @@ import Modal from "~/components/Modal"
 import PlayerCard from "~/components/PlayerCard"
 import TrmCard from "~/components/TrmCard"
 import { useSubmit } from "@remix-run/react";
-import { motion } from 'framer-motion'
 import { constructUrlForDo } from "~/utils"
 import { useToast } from "~/contexts/ToastContext"
+import QuickReactions from "~/components/QuickReactions"
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -282,18 +282,7 @@ export default function Board() {
             </div>
             <div className="flex flex-col md:flex-row gap-10 items-start md:items-center md:justify-between">
                 <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
-                { reactions.map(({ label, value }) => (
-                    <motion.p
-                        key={value}
-                        onClick={() => sendQuickReaction(value)}
-                        className="hover:cursor-pointer"
-                        whileHover={{
-                            scale: 1.2,
-                            transition: { duration: 0.1 },
-                        }}
-                        whileTap={{ rotate: 360 }}
-                    >{label}</motion.p>
-                ))}
+                    <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
                 </div>
                 <div className="flex flex-col md:flex-row gap-2 items-start md:items-center">
                     <button 
