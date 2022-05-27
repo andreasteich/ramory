@@ -11,7 +11,7 @@ export default function Toast({ id, message, removeToast }: any) {
     useEffect(() => {
         const timer = setTimeout(() => {
           removeToast(id);
-        }, 3000);
+        }, 5000);
     
         return () => {
           clearTimeout(timer);
