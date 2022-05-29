@@ -32,7 +32,7 @@ export default function Index() {
 
   return (
     <div className="grid grid-cols-1">
-      <div className="flex flex-col bg-orange-400 gap-8 items-center border-b border-black px-8 py-16">
+      <div className="flex flex-col bg-orange-400 gap-4 items-center border-b border-black px-8 py-16">
         <p className="font-bold text-center">⛅️ Cloudfare Spring Developer Challenge 2022</p>
         <p className="text-sm text-center">Our submission for Cloudflare Spring Developer Challenge 2022, created with 🤙🏻 by @Andifined97 and @dev-hias</p>
       </div>
@@ -88,8 +88,12 @@ export default function Index() {
           </Form>
         </div>
       </div>
-      <div className="flex bg-gray-200 flex-col gap-16 items-start border-t border-black px-8 py-16">
-        <p>Footer</p>
+      <div className="flex bg-gray-200 flex-col gap-8 items-start border-t border-black px-8 py-16">
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-light">Legal</p>
+          <p className="text-sm font-light">Privacy Policy</p>
+        </div>
+        <p className="text-sm">Copyright © 2022 RAMory</p>
       </div>
     </div>
   );
