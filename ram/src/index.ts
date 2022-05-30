@@ -77,14 +77,10 @@ function shuffle(array: TrmCard[]) {
   return array;
 }
 
-function createTrmCards(images: string[], allowedPlayersInTotal = 1) {
-  let defaultPairCount = 6
-
-  const pairsInTotal = defaultPairCount + 2 * allowedPlayersInTotal
-
+function createChipSet(images: string[]) {
   const imagesToUse = []
 
-  for (let i = 0; i < pairsInTotal; i++) {
+  for (let i = 0; i < 12; i++) {
     imagesToUse.push(images[i])
   }
 
@@ -232,7 +228,7 @@ export class Ram {
           }
         }
 
-        await this.state.storage.put('deck', shuffle(createTrmCards(PAIRS)))
+        await this.state.storage.put('deck', shuffle(createChipSet(PAIRS)))
 
         return new Response('Board created')
       }
@@ -281,7 +277,16 @@ export class Ram {
                 reaction = reaction + ' says hello 🙋🏻‍♂️'
                 break
               case 'party':
-                reaction = reaction + ' wants to party 🥳'
+                reaction = reaction + ' is celebrating itself 🥳'
+                break
+              case 'looking':
+                reaction = reaction + ' is watching you 👀'
+                break
+              case 'gotcha':
+                reaction = reaction + ' feels like the boss 💪🏻'
+                break
+              case 'swag':
+                reaction = reaction + ' has the swag 🤙🏻'
                 break
             }
 

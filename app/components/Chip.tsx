@@ -7,15 +7,15 @@ type Props = {
     imageUrl: any
     isMyTurn: boolean
     active: boolean
-    cardClicked: (id: string) => void
+    chipClicked: (id: string) => void
 }
 
-export default function TrmCard({ id, clicked, imageUrl, active, isMyTurn, cardClicked }: Props) {
+export default function Chip({ id, clicked, imageUrl, active, isMyTurn, chipClicked }: Props) {
     return (
         <motion.div 
             key={id}
-            className={`shadow-lg hover:cursor-pointer h-full rounded-2xl ${active ? 'bg-pink-500' : 'bg-gray-300'} flex flex-col justify-center`}
-            onClick={isMyTurn && active ? () => cardClicked(id) : () => {}}
+            className={`shadow-[1px_1px_0_0_rgba(0,0,0,1)] border-2 border-black hover:cursor-pointer h-full ${active && 'bg-neutral-400'} flex flex-col justify-center`}
+            onClick={isMyTurn && active ? () => chipClicked(id) : () => {}}
             initial="hidden"
             whileInView="visible"
             transition={{ duration: 0.3 }}
@@ -29,7 +29,7 @@ export default function TrmCard({ id, clicked, imageUrl, active, isMyTurn, cardC
             }}
             whileTap={{ rotate: active && isMyTurn ? 360 : 0 }}
         >
-            { clicked ? <p className='text-center text-4xl md:text-6xl p-4'>{ imageUrl }</p> : <p className={`${active ? 'text-black' : 'text-gray-400'} p-4 text-4xl md:text-6xl mx-auto`}>R</p> }
+            { clicked ? <p className='text-center text-4xl md:text-6xl p-4'>{ imageUrl }</p> : <img src="/silicon.png" className={`${!active && 'hue-rotate-180 brightness-50'} object-scale-down`}/> }
         </motion.div>
     )
 }

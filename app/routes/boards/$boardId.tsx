@@ -1,14 +1,14 @@
-import { ArrowCircleLeftIcon, ArrowRightIcon, ClipboardIcon, LockClosedIcon, LockOpenIcon, LogoutIcon, UsersIcon } from "@heroicons/react/outline"
 import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
 import { Form, useLoaderData, useParams } from "@remix-run/react"
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react"
-import Modal from "~/components/Modal"
-import PlayerCard from "~/components/PlayerCard"
-import TrmCard from "~/components/TrmCard"
+import { useEffect, useRef, useState } from "react"
+import TrmCard from "~/components/Chip"
 import { useSubmit } from "@remix-run/react";
 import { constructUrlForDo } from "~/utils"
 import { useToast } from "~/contexts/ToastContext"
 import QuickReactions from "~/components/QuickReactions"
+import Chip from "~/components/Chip";
+import RamCard from "~/components/RamCard";
+import { ArrowRightIcon } from "@heroicons/react/outline";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -99,6 +99,19 @@ export default function Board() {
         {
             label: '🙋🏻‍♂️',
             value: 'hello'
+        },
+        ,
+        {
+            label: '🤙🏻',
+            value: 'swag'
+        },
+        {
+            label: '👀',
+            value: 'looking'
+        },
+        {
+            label: '💪🏻',
+            value: 'gotcha'
         }
     ]
 
@@ -237,22 +250,52 @@ export default function Board() {
         console.log('send')
     }
 
-    const shareBoard = async () => {
-        try {
-            await navigator.share({
-                title: 'RAMory',
-                text: 'How good is your memory?',
-                url: window.location.href
-            })
-          } catch(err) {
-            console.log(err)
-          }
-    }
-
     const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
 
+    const chipSet = []
+
+    for (let i = 0; i < 24; i++) {
+        chipSet.push(<img src="/silicon.png" className="object-scale-down"/>)
+    }
+
     return (
-        <div className="flex flex-col gap-10 justify-between h-full">
+        <div className="p-8 bg-gray-800 gap-8 h-[100vh]">
+            <div className="flex flex-col gap-8 lg:max-w-[1024px] mx-auto my-0">
+                <div className="flex flex-col gap-8">
+                    <div className="flex flex-row justify-between">
+                        <p className="px-2 py-1 bg-pink-200 font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black">🎮 {isTurnOf}</p>
+                        <div className="flex flex-row gap-2">
+                            <p className="px-2 py-1 bg-pink-200 font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black">🔁 1/4</p>
+                            <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 hover:cursor-pointer">
+                                <input hidden value={boardId} name="ramToLeave" readOnly />
+                                <button className="font-semibold" type="submit">🌱 leave</button>
+                            </Form>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 grid-rows-6 md:grid-cols-6 md:grid-rows-4 gap-4 justify-start">
+                    { cards.map(({ id, clicked, imageUrl, active }) => (
+                        <Chip 
+                            key={id}
+                            id={id}
+                            clicked={clicked}
+                            isMyTurn={isMyTurn}
+                            imageUrl={imageUrl}
+                            active={active}
+                            chipClicked={flipCard}
+                        />
+                    )) }
+                    </div>
+                    <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                { players.map(({ username, itsMe, matchedPairs }) => (
+                    <RamCard key={username} itsMe={itsMe} username={username} ramCollected={matchedPairs} />
+                ))}
+                </div>
+            </div>
+            
+        </div>
+        /*<div className="flex flex-col gap-10 justify-between h-full">
             <div className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center">
                 <h1 className="font-bold text-6xl">RAMory</h1>
             </div>
@@ -317,6 +360,6 @@ export default function Board() {
                     </Form>
                 </Modal>
             )}
-        </div>
+        </div>*/
     )
 }
