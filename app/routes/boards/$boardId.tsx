@@ -9,6 +9,7 @@ import QuickReactions from "~/components/QuickReactions"
 import Chip from "~/components/Chip";
 import RamCard from "~/components/RamCard";
 import { ArrowRightIcon } from "@heroicons/react/outline";
+import Modal from "~/components/Modal";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -293,7 +294,15 @@ export default function Board() {
                 ))}
                 </div>
             </div>
-            
+            { showEnterUsernameModal && (
+                <Modal closeModal={() => setShowEnterUsernameModal(true)} >
+                    <h1>Enter username</h1>
+                    <Form reloadDocument method="post" className="flex flex-col items-center gap-5">
+                        <input type="text" placeholder="Enter username" name="username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+                        <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's go!</button>
+                    </Form>
+                </Modal>
+            )}
         </div>
         /*<div className="flex flex-col gap-10 justify-between h-full">
             <div className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center">
@@ -351,15 +360,7 @@ export default function Board() {
                     <h1>Looser!</h1>
                 </Modal>
             )}
-            { showEnterUsernameModal && (
-                <Modal closeModal={() => setShowEnterUsernameModal(true)} >
-                    <h1>Enter username</h1>
-                    <Form reloadDocument method="post" className="flex flex-col items-center gap-5">
-                        <input type="text" placeholder="Enter username" name="username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
-                        <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's go!</button>
-                    </Form>
-                </Modal>
-            )}
+            
         </div>*/
     )
 }
