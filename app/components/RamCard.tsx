@@ -1,22 +1,14 @@
-import { Link } from "@remix-run/react";
-
 type Props = {
-    id: string
-    playersWaiting: string[]
-    availableSlots: number
+    username: string
+    ramCollected: number
+    itsMe: boolean
 }
 
-export default function RamCard({ id, playersWaiting, availableSlots }: Props) {
+export default function RamCard({ username, ramCollected, itsMe }: Props) {
     return (
-        <div className="border rounded-xl p-4 flex flex-col gap-5">
-            <h4 className="font-bold">RAM - {id}</h4>
-            <div className="flex flex-col gap-2">
-                <p>{playersWaiting[0]} is waitin'</p>
-                <p className="text-green-500">{availableSlots} slots available</p>
-            </div>
-            <Link to={id}>
-                <p className="px-4 py-2 text-center bg-pink-500 hover:bg-pink-600 rounded-lg text-white">Take it</p>
-            </Link>
+        <div className="flex font-bold flex-row justify-between shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-green-400 px-2 py-1">
+            <p>{username} {itsMe && '(me)'}</p>
+            <p>{ramCollected} MB</p>
         </div>
     )
 }

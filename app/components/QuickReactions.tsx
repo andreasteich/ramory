@@ -24,7 +24,7 @@ export default function QuickReactions({ reactions, sendQuickReaction }: Props) 
     }, [sendingPossible])
 
     return (
-        <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
+        <div className="flex flex-row justify-between">
             { reactions.map(({ label, value }) => (
             <motion.p
                 key={value}
