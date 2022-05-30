@@ -29,9 +29,7 @@ export default function App() {
         <Links />
       </head>
       <body className="h-full">
-        <ToastProvider>
-          <Outlet />
-        </ToastProvider>
+        <Outlet />
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
