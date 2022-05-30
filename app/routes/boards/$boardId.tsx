@@ -10,6 +10,9 @@ import Chip from "~/components/Chip";
 import RamCard from "~/components/RamCard";
 import { ArrowRightIcon } from "@heroicons/react/outline";
 import Modal from "~/components/Modal";
+import Console from "~/components/ConsoleHistory";
+import ConsoleInput from "~/components/ConsoleInput";
+import ConsoleHistory from "~/components/ConsoleHistory";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -79,7 +82,6 @@ type Reaction = {
 }
 
 export default function Board() {
-    const { addToast } = useToast()
     const reactions: Reaction[] = [
         {
             label: '🤔',
@@ -117,6 +119,7 @@ export default function Board() {
     ]
 
     const socket = useRef<WebSocket>()
+    const consoleInputRef = useRef<HTMLInputElement>(null)
 
     const { boardId } = useParams()
     const submit = useSubmit();
@@ -130,6 +133,13 @@ export default function Board() {
     const [showYouWonModal, setShowYouWonModal] = useState(false)
     const [showYouLostModal, setShowYouLostModal] = useState(false)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
+    const [notifications, setNotficiations] = useState<any[]>([])
+
+    useEffect(() => {
+        if (consoleInputRef.current) {
+            consoleInputRef.current.scrollIntoView({ behavior: "smooth" })
+        }
+    }, [notifications])
 
     useEffect(() => {
         if (hasSession) {
@@ -169,7 +179,6 @@ export default function Board() {
                         break
     
                     case 'quickReaction':
-                        addToast(payload)
                         break
                     case 'pairFound':
                         setCards(prevCards => {
@@ -181,7 +190,6 @@ export default function Board() {
     
                             return cards
                         })
-                        addToast(`Pair found`)
 
                         break
     
@@ -225,7 +233,6 @@ export default function Board() {
     
                             return players
                         })
-                        addToast(`${username} joined the board 🤙🏻`)
     
                         break
 
@@ -235,7 +242,6 @@ export default function Board() {
     
                             return players
                         })
-                        addToast(`${payload} left the board 👎🏻`)
     
                         break
                 }
@@ -260,17 +266,13 @@ export default function Board() {
     }
 
     return (
-        <div className="p-8 bg-gray-800 gap-8 h-[100vh]">
+        <div className="p-8 bg-gray-800 gap-8">
             <div className="flex flex-col gap-8 lg:max-w-[1024px] mx-auto my-0">
                 <div className="flex flex-col gap-8">
-                    <div className="flex flex-row justify-between">
-                        <p className="px-2 py-1 bg-pink-200 font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black">🎮 {isTurnOf}</p>
-                        <div className="flex flex-row gap-2">
-                            <p className="px-2 py-1 bg-pink-200 font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black">🔁 1/4</p>
-                            <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 hover:cursor-pointer">
-                                <input hidden value={boardId} name="ramToLeave" readOnly />
-                                <button className="font-semibold" type="submit">🌱 leave</button>
-                            </Form>
+                    <div>
+                        <ConsoleHistory notifications={notifications} />
+                        <div ref={consoleInputRef}>
+                            <ConsoleInput notification={notifications[0]} />
                         </div>
                     </div>
                     <div className="grid grid-cols-4 grid-rows-6 md:grid-cols-6 md:grid-rows-4 gap-4 justify-start">
@@ -293,6 +295,10 @@ export default function Board() {
                     <RamCard key={username} itsMe={itsMe} username={username} ramCollected={matchedPairs} />
                 ))}
                 </div>
+                <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer">
+                    <input hidden value={boardId} name="ramToLeave" readOnly />
+                    <button className="font-semibold" type="submit">🌱 leave</button>
+                </Form>
             </div>
             { showEnterUsernameModal && (
                 <Modal closeModal={() => setShowEnterUsernameModal(true)} >
@@ -304,63 +310,5 @@ export default function Board() {
                 </Modal>
             )}
         </div>
-        /*<div className="flex flex-col gap-10 justify-between h-full">
-            <div className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center">
-                <h1 className="font-bold text-6xl">RAMory</h1>
-            </div>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-5 h-full">
-                { cards.map(({ id, clicked, imageUrl, active }) => (
-                    <TrmCard 
-                        key={id}
-                        id={id}
-                        clicked={clicked}
-                        isMyTurn={isMyTurn}
-                        imageUrl={imageUrl}
-                        active={active}
-                        cardClicked={flipCard}
-                    />
-                )) }
-            </div>
-            <div className="flex flex-col gap-2">
-                <div className="flex flex-row gap-2 items-center">
-                    <UsersIcon className="h-4" />
-                    <p className="text-sm font-bold">{players.length} / {allowedPlayersInTotal}</p>
-                </div>
-                <div className="flex flex-col gap">
-                { players.map(({ username, itsMe, matchedPairs }) => (
-                    <PlayerCard key={username} active={isTurnOf === username} myself={itsMe} username={username} matchedPairs={matchedPairs} />
-                ))}
-                </div>
-            </div>
-            <div className="flex flex-col md:flex-row gap-10 items-start md:items-center md:justify-between">
-                <div className="flex flex-row gap-2 bg-gray-300 px-2 py-1 rounded-full">
-                    <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
-                </div>
-                <div className="flex flex-col md:flex-row gap-2 items-start md:items-center">
-                    <button 
-                        onClick={() => shareBoard()}
-                        className="text-pink-500 px-4 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-xl flex flex-row gap-2 items-center"
-                    ><ClipboardIcon className="h-4"/>Send board to friend</button>
-                    <Form method="post" action="/leave-ram" className="flex text-gray-400 px-4 py-2 flex-row gap-2 items-center hover:cursor-pointer">
-                        <input hidden value={boardId} name="ramToLeave" readOnly />
-                        <button className="text-xs rounded-lg" type="submit">Leave</button>
-                        <ArrowRightIcon className="h-4"></ArrowRightIcon>
-                    </Form>
-                </div>
-                
-            </div>
-            
-            { showYouWonModal && (
-                <Modal closeModal={() => setShowYouWonModal(true)}>
-                    <h1>Nice you won!</h1>
-                </Modal>
-            )}
-            { showYouLostModal && (
-                <Modal closeModal={() => setShowYouLostModal(true)}>
-                    <h1>Looser!</h1>
-                </Modal>
-            )}
-            
-        </div>*/
     )
 }
