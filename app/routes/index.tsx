@@ -7,19 +7,10 @@ import { useToast } from "~/contexts/ToastContext";
 import { constructUrlForDo } from "~/utils";
 
 export const action: ActionFunction = async ({ context, request }) => {
-  const { allowedPlayersInTotal, topic } = Object.fromEntries(await request.formData())
-
-  const payload = {
-      isPrivate: true,
-      allowedPlayersInTotal,
-      topic
-  }
-
   const { env } = context
 
   const response = await fetch(constructUrlForDo(env.DO_HOST, 'boards'), { 
-      method: 'POST',
-      body: JSON.stringify(payload)
+      method: 'POST'
   })
 
   const { boardId } = await response.json()

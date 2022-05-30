@@ -232,13 +232,9 @@ export class Ram {
           }
         }
 
-        const { isPrivate, allowedPlayersInTotal, topic } = await request.json()
+        await this.state.storage.put('deck', shuffle(createTrmCards(PAIRS)))
 
-        await this.state.storage.put('allowedPlayersInTotal', allowedPlayersInTotal)
-        await this.state.storage.put('topic', topic)
-        await this.state.storage.put('deck', shuffle(createTrmCards(PAIRS, allowedPlayersInTotal)))
-
-        return new Response(JSON.stringify({ isPrivate }))
+        return new Response('Board created')
       }
 
       default:
