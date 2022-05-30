@@ -29,7 +29,7 @@ export default function Chip({ id, clicked, imageUrl, active, isMyTurn, chipClic
             }}
             whileTap={{ rotate: active && isMyTurn ? 360 : 0 }}
         >
-            { clicked ? <p className='text-center text-4xl md:text-6xl p-4'>{ imageUrl }</p> : <img src="/silicon.png" className={`${!active && 'hue-rotate-180 brightness-50'} object-scale-down`}/> }
+            { clicked ? <p className='text-center text-4xl md:text-6xl'>{ imageUrl }</p> : <img src="/silicon.png" className={`${!active && 'hue-rotate-180 brightness-50'} object-scale-down`}/> }
         </motion.div>
     )
 }
