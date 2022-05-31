@@ -36,8 +36,6 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
     } else {
         data = { ...data, hasSession: false }
     }
-
-    console.log(data)
     
     return json({ 
         ...data,
@@ -73,6 +71,7 @@ type Player = {
     matchedPairs: number
     username: string
     itsMe: boolean
+    incorrectMatches: number
 }
 
 type Reaction = {
@@ -191,13 +190,22 @@ export default function Board() {
                         ])
                         break
                     case 'pairFound':
-                        const { chipsToDeactivate, relatedTo } = payload
+                        const { chipsToDeactivate, relatedTo, pairs } = payload
 
                         setCards(prevCards => {
                             let cards = prevCards.map(card => ({
                                 ...card,
                                 clicked: false,
                                 active: card.active ? !chipsToDeactivate.includes(card.id) : card.active
+                            }))
+    
+                            return cards
+                        })
+
+                        setPlayers(prevPlayers => {
+                            let cards = prevPlayers.map(player => ({
+                                ...player,
+                                matchedPairs: player.username === payload.relatedTo ? payload.matchedPairs : player.matchedPairs
                             }))
     
                             return cards
@@ -218,17 +226,6 @@ export default function Board() {
                         setBoardHistory(history => [...history, { type: '', from: 'syslog', message: `it's your turn ${payload}`}])
                         break
     
-                    case 'incrementPairsOfPlayer':
-                        setPlayers(prevPlayers => {
-                            let cards = prevPlayers.map(player => ({
-                                ...player,
-                                matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
-                            }))
-    
-                            return cards
-                        })
-                        break
-    
                     case 'youWon':
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
@@ -247,10 +244,22 @@ export default function Board() {
                     
                     case 'noMatch':
                         setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
+                        setPlayers(prevPlayers => {
+                            let players = prevPlayers.map(player => ({
+                                ...player,
+                                incorrectMatches: player.username === payload.relatedTo ? payload.incorrectMatches : player.incorrectMatches
+                            }))
+    
+                            return players
+                        })
+                        setBoardHistory(prevHistory => [
+                            ...prevHistory,
+                            { type: '', from: 'syslog', message: `No match! -100mb for ${payload.relatedTo}`}
+                        ])
                         break
                     
                     case 'playerJoined':
-                        const { username, matchedPairs, itsMe } = payload
+                        const { username, matchedPairs, itsMe, incorrectMatches } = payload
     
                         setPlayers(prevPlayers => {
                             let players = prevPlayers.map(player => ({
@@ -258,7 +267,7 @@ export default function Board() {
                                 matchedPairs: player.username === payload ? player.matchedPairs + 1 : player.matchedPairs
                             }))
     
-                            players.push({ matchedPairs, username, itsMe })
+                            players.push({ matchedPairs, username, itsMe, incorrectMatches })
     
                             return players
                         })
@@ -335,8 +344,8 @@ export default function Board() {
                     <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                { players.map(({ username, itsMe, matchedPairs }) => (
-                    <RamCard key={username} itsMe={itsMe} username={username} ramCollected={matchedPairs} />
+                { players.map(({ username, itsMe, matchedPairs, incorrectMatches }) => (
+                    <RamCard key={username} itsMe={itsMe} username={username} matchedPairs={matchedPairs} incorrectMatches={incorrectMatches} />
                 ))}
                 </div>
                 <div className="flex flex-col gap-2">
