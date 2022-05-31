@@ -282,7 +282,7 @@ export class Ram {
         const boardStats: BoardStats = {
           currentState: 'poweredOff',
           roundsToPlay: 0,
-          currentRound: 0
+          currentRound: 1
         }
 
         await this.state.storage.put('boardStats', boardStats)
@@ -323,32 +323,32 @@ export class Ram {
             const players1 = await this.state.storage.get<Player[]>('players') ?? []
             const username = players1.find(player => player.cookie === cookie)?.username
 
-            let reaction = username
+            let reaction = ''
 
             switch (payload) {
               case 'nerdy':
-                reaction = reaction + ' feels nerdy 🥸'
+                reaction = 'feels nerdy 🥸'
                 break
               case 'hugs':
-                reaction = reaction + ' loves you all 🤗'
+                reaction = 'loves you all 🤗'
                 break
               case 'thinking':
-                reaction = reaction + ' is thinking really hard 🤔'
+                reaction = 'is thinking really hard 🤔'
                 break
               case 'hello':
-                reaction = reaction + ' says hello 🙋🏻‍♂️'
+                reaction = 'says hello 🙋🏻‍♂️'
                 break
               case 'party':
-                reaction = reaction + ' is celebrating itself 🥳'
+                reaction = 'is celebrating itself 🥳'
                 break
               case 'looking':
-                reaction = reaction + ' is watching you 👀'
+                reaction = 'is watching you 👀'
                 break
               case 'gotcha':
-                reaction = reaction + ' feels like the boss 💪🏻'
+                reaction = 'feels like the boss 💪🏻'
                 break
               case 'swag':
-                reaction = reaction + ' has the swag 🤙🏻'
+                reaction = 'has the swag 🤙🏻'
                 break
             }
 
@@ -396,7 +396,7 @@ export class Ram {
                   if (pairsLeft === undefined) {
                     const { roundsToPlay, currentRound } = boardStats
 
-                    if (currentRound <= roundsToPlay) {
+                    if (currentRound < roundsToPlay) {
                       setTimeout(async () => {
                         boardHistory?.push({ type: HistorySliceType.ROUND_OVER, relatedTo: 'syslog', message: currentRound.toString() })
 
@@ -405,12 +405,17 @@ export class Ram {
                         this.broadcast({ action: 'roundOver' })
                       }, 2000)
 
-                      setTimeout(() => {
+                      setTimeout(async () => {
                         boardStats.currentRound = boardStats.currentRound + 1
+                        await this.state.storage.put('boardStats', boardHistory)
 
                         boardHistory?.push({ type: HistorySliceType.ROUND_STARTED, relatedTo: 'syslog', message: boardStats.currentRound.toString() })
+                        await this.state.storage.put('boardHistory', boardHistory)
+                        
+                        const chipSet =  shuffle(createChipSet(PAIRS))
+                        await this.state.storage.put('deck', chipSet)
 
-                        this.broadcast({ action: 'roundStarted', payload: boardStats.currentRound })
+                        this.broadcast({ action: 'roundStarted', payload: { currentRound: boardStats.currentRound, chipSet }})
                       }, 4000)
 
                       setTimeout(async () => {
@@ -426,7 +431,7 @@ export class Ram {
 
                         boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOf ?? 'no value?' })
                         await this.state.storage.put('boardHistory', boardHistory)
-                        
+
                         this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
                       }, 6000)
 

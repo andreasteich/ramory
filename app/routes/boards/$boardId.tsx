@@ -31,8 +31,8 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
             method: 'POST'
         })
 
-        const { isTurnOf, players, boardHistory } = await response.json()
-        data = { ...data, hasSession: true, players, isTurnOf, boardHistory }
+        const { isTurnOf, players, boardHistory, boardStats } = await response.json()
+        data = { ...data, hasSession: true, players, isTurnOf, boardHistory, boardStats }
     } else {
         data = { ...data, hasSession: false }
     }
@@ -124,13 +124,14 @@ export default function Board() {
     const submit = useSubmit();
 
     const data = useLoaderData()
-    const { deck, hasSession, doHost, boardStats } = data
+    const { deck, hasSession, doHost } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
     const [players, setPlayers] = useState<Player[]>(data.players ?? [])
     const [isTurnOf, setIsTurnOf] = useState<string | undefined>(data.isTurnOf)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
     const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory)
+    const [boardStats, setBoardStats] = useState<any>(data.boardStats)
 
     useEffect(() => {
         if (consoleInputRef.current) {
@@ -161,6 +162,14 @@ export default function Board() {
                 const { action, payload } = JSON.parse(data)
                 
                 switch (action) {
+                    case 'roundStarted':
+                        const { currentRound, chipSet } = payload
+
+                        setCards(chipSet)
+                        setBoardStats(prevStats => ({ ...prevStats, currentRound }))
+                        setBoardHistory(history => [...history, { type: '', from: 'syslog', message: `Round ${boardStats.currentRound}/${boardStats.roundsToPlay} started, good luck!`}])
+
+                        break
                     case 'flipCard':
                         setCards(prevCards => {
                             const cards = [...prevCards]
@@ -176,6 +185,10 @@ export default function Board() {
                         break
     
                     case 'quickReaction':
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: '', from: payload.relatedTo, message: payload.message }
+                        ])
                         break
                     case 'pairFound':
                         const { chipsToDeactivate, relatedTo } = payload
