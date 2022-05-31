@@ -47,7 +47,7 @@ export default {
 
 type Player = {
   matchedPairs: number
-  incorrectTurns: number
+  incorrectMatches: number
   websocket?: WebSocket
   username?: string
   cookie?: string | null
@@ -71,7 +71,8 @@ enum HistorySliceType {
   ROUND_OVER = 'ROUND_OVER',
   ROUND_STARTED = 'ROUND_STARTED',
   ROUNDS_TO_PLAY_OVER = 'ROUNDS_TO_PLAY_OVER',
-  OVERALL_RESULT = 'OVERALL_RESULT'
+  OVERALL_RESULT = 'OVERALL_RESULT',
+  NO_MATCH = 'NO_MATCH'
 }
 
 type HistorySlice = {
@@ -239,7 +240,7 @@ export class Ram {
             const playerAlreadyExists = players.find(player => player.cookie === cookie)
 
             if (!playerAlreadyExists && cookie) {
-              players.push({ username, cookie, matchedPairs: 0, incorrectTurns: 0 })
+              players.push({ username, cookie, matchedPairs: 0, incorrectMatches: 0 })
               
               boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: 'syslog', message: `${username} joined the board` })
 
@@ -259,7 +260,8 @@ export class Ram {
               players: players.map(player => ({ 
                 username: player.username, 
                 itsMe: player.cookie === cookie, 
-                matchedPairs: player.matchedPairs
+                matchedPairs: player.matchedPairs,
+                incorrectMatches: player.incorrectMatches
               })),
               boardStats,
               boardHistory: boardHistory.map(historySlice => {
@@ -376,8 +378,10 @@ export class Ram {
               setTimeout(async () => {
                 let isTurnOf = await this.state.storage.get<string>('isTurnOf')
 
+                const playerToAdjust = players.find(player => player.username === isTurnOf)
+
                 if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
-                  const playerToAdjust = players.find(player => player.username === isTurnOf)
+                  
 
                   // TODO: throw error
                   if (!playerToAdjust) {
@@ -387,7 +391,7 @@ export class Ram {
 
                   playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
                   boardHistory?.push({ type: HistorySliceType.PAIR_FOUND, relatedTo: playerToAdjust.username ?? 'no value?' })
-                  this.broadcast({ action: 'pairFound', payload: { chipsToDeactivate: [clickedCards[0].id, clickedCards[1].id], relatedTo: playerToAdjust.username }})
+                  this.broadcast({ action: 'pairFound', payload: { chipsToDeactivate: [clickedCards[0].id, clickedCards[1].id], relatedTo: playerToAdjust.username, matchedPairs: playerToAdjust.matchedPairs }})
 
                   clickedCards[0].active = false
                   clickedCards[1].active = false
@@ -464,14 +468,22 @@ export class Ram {
                   }
                 } else {
                   const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
+
+                  if (!playerToAdjust) return
+
+                  playerToAdjust.incorrectMatches = playerToAdjust.incorrectMatches + 1
+                  await this.state.storage.put('players', players)
+
+                  boardHistory?.push({ type: HistorySliceType.NO_MATCH, relatedTo: playerToAdjust.username ?? 'no value?' })
+                  await this.state.storage.put('boardHistory', boardHistory)
+
+                  this.broadcast({ action: 'noMatch', payload: { relatedTo: playerToAdjust.username, incorrectMatches: playerToAdjust.incorrectMatches }})
                   
                   try {
                     isTurnOf = players[currentPlayersIndex + 1].username
                   } catch(e) {
                     isTurnOf = players[0].username
                   }
-
-                  this.broadcast({ action: 'noMatch' })
 
                   boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOf ?? 'no value?' })
                   await this.state.storage.put('boardHistory', boardHistory)
