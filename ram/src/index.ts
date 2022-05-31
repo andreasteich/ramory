@@ -47,6 +47,7 @@ export default {
 
 type Player = {
   matchedPairs: number
+  incorrectTurns: number
   websocket?: WebSocket
   username?: string
   cookie?: string | null
@@ -57,6 +58,32 @@ type TrmCard = {
   clicked: boolean
   imageUrl: string
   active: boolean
+}
+
+enum HistorySliceType {
+  JOINED,
+  PAIR_FOUND,
+  LEFT,
+  BOARD_CREATED,
+  STARTED,
+  QUICK_REACTION,
+  IS_TURN_OF,
+  ROUND_OVER,
+  ROUND_STARTED,
+  ROUNDS_TO_PLAY_OVER,
+  OVERALL_RESULT
+}
+
+type HistorySlice = {
+  type: HistorySliceType
+  relatedTo: 'syslog' | string
+  message?: string
+}
+
+type BoardStats = {
+  currentState: string
+  roundsToPlay: number
+  currentRound: number
 }
 
 const PAIRS: string[] = ['🫐', '🫒', '🍕', '🥩', '🫑', '🥥', '🧄', '🥖', '🥫', '🥕', '🍟', '🍇']
@@ -160,6 +187,7 @@ export class Ram {
             this.connections = this.connections.filter(connection => connection.cookie !== cookie)
 
             let players = await this.state.storage.get<Player[]>('players') ?? []
+            const boardHistory = await this.state.storage.get<HistorySlice[]>('boardHistory')
             const playerToRemove = { ...players.find(player => player.cookie === cookie) }
 
             if (!playerToRemove) {
@@ -174,20 +202,22 @@ export class Ram {
             }
 
             await this.state.storage.put('players', players)
+            
+            boardHistory?.push({ type: HistorySliceType.LEFT, relatedTo: playerToRemove.username ?? 'no value?' })
+            await this.state.storage.put('boardHistory', boardHistory)
+
             this.broadcast({ action: 'playerLeft', payload: playerToRemove.username })
 
             return new Response('Player left ' + playerToRemove.username)
           }
 
           if (request.method === 'GET') {
-            const allowedPlayersInTotal = await this.state.storage.get('allowedPlayersInTotal')
             const deck = await this.state.storage.get<TrmCard[]>('deck')
 
             let players = await this.state.storage.get<Player[]>('players') ?? []
             let isTurnOf = await this.state.storage.get('isTurnOf')
         
             const data = {
-              allowedPlayersInTotal,
               isPrivate: true,
               isTurnOf,
               players,
@@ -200,35 +230,57 @@ export class Ram {
 
             let players = await this.state.storage.get<Player[]>('players') ?? []
             let isTurnOf = await this.state.storage.get('isTurnOf')
+            let boardStats = await this.state.storage.get<BoardStats>('boardStats') ?? { currentRound: 0, currentState: 'poweredOff', roundsToPlay: 0 }
+            
             
             const playerAlreadyExists = players.find(player => player.cookie === cookie)
   
             if (!playerAlreadyExists && cookie) {
-              players.push({ username, cookie, matchedPairs: 0 })
-              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, itsMe: false } })
+              players.push({ username, cookie, matchedPairs: 0, incorrectTurns: 0 })
+
+              let boardHistory = await this.state.storage.get<HistorySlice[]>('notifications') ?? []
+              boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: username })
+              await this.state.storage.put('boardHistory', boardHistory)
+
+              // TODO: remove itsMe?
+              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectTurns: 0, itsMe: false } })
             }
   
             if (!isTurnOf) {
               isTurnOf = players[0].username
             }
+
+            boardStats.roundsToPlay = boardStats.roundsToPlay + 1
   
             const data = {
               isTurnOf,
               players: players.map(player => ({ 
                 username: player.username, 
                 itsMe: player.cookie === cookie, 
-                matchedPairs: player.matchedPairs 
-              }))
+                matchedPairs: player.matchedPairs
+              })),
+              boardStats
+              // TODO: map notifications
             }
 
             await this.state.storage.put('players', players)
             await this.state.storage.put('isTurnOf', isTurnOf)
+            await this.state.storage.put('boardStats', boardStats)
   
             return new Response(JSON.stringify(data))
           }
         }
 
+        await this.state.storage.put<HistorySlice[]>('boardHistory', [{ type: HistorySliceType.BOARD_CREATED, relatedTo: 'syslog' }])
         await this.state.storage.put('deck', shuffle(createChipSet(PAIRS)))
+
+        const boardStats: BoardStats = {
+          currentState: 'poweredOff',
+          roundsToPlay: 0,
+          currentRound: 0
+        }
+
+        await this.state.storage.put('boardStats', boardStats)
 
         return new Response('Board created')
       }
@@ -254,6 +306,11 @@ export class Ram {
     webSocket.addEventListener('message', async ({ data }) => {
       try {
         const { action, payload } = JSON.parse(data)
+
+        const boardHistory = await this.state.storage.get<HistorySlice[]>('boardHistory')
+        const boardStats = await this.state.storage.get<BoardStats>('boardStats')
+
+        if (!boardStats) return
 
         switch (action) {
           case 'quickReaction':
@@ -290,15 +347,16 @@ export class Ram {
                 break
             }
 
-            this.broadcast({ action: 'quickReaction', payload: reaction })
-
+            
+            boardHistory?.push({ type: HistorySliceType.QUICK_REACTION, relatedTo: username ?? 'no value?', message: reaction })
+            this.broadcast({ action: 'quickReaction', payload: { relatedTo: username, message: reaction } })
             break
           case 'flipCard':
             let deck = await this.state.storage.get<TrmCard[]>('deck') ?? []
 
             deck.forEach(card => {
               if (card.id === payload) {
-                card.clicked = !card.clicked
+                card.clicked = true
               }
             })
 
@@ -311,7 +369,7 @@ export class Ram {
                 let isTurnOf = await this.state.storage.get<string>('isTurnOf')
 
                 if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
-                  this.broadcast({ action: 'pairFound', payload: [clickedCards[0].id, clickedCards[1].id] })
+                  
 
                   const playerToAdjust = players.find(player => player.username === isTurnOf)
 
@@ -322,7 +380,8 @@ export class Ram {
                   }
 
                   playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
-                  this.broadcast({ action: 'incrementPairsOfPlayer', payload: playerToAdjust.username })
+                  boardHistory?.push({ type: HistorySliceType.PAIR_FOUND, relatedTo: username ?? 'no value?' })
+                  this.broadcast({ action: 'pairFound', payload: { chipsToDeactivate: [clickedCards[0].id, clickedCards[1].id], playerToIncrement: playerToAdjust.username }})
 
                   clickedCards[0].active = false
                   clickedCards[1].active = false
@@ -330,18 +389,56 @@ export class Ram {
                   const allPairsFound = deck.find(card => card.active)
                   
                   if (allPairsFound) {
-                    const winner = players.reduce((previousPlayer, currentPlayer) => {
-                      if (previousPlayer.matchedPairs > currentPlayer.matchedPairs) {
-                        return previousPlayer
-                      } else {
-                        return currentPlayer
-                      }
-                    })
+                    const { roundsToPlay, currentRound } = boardStats
 
-                    const { username, websocket } = winner
-                    
-                    this.broadcast(players, { action: 'youLost' }, username)
-                    websocket?.send(JSON.stringify({ action: 'youWon' }))
+                    if (currentRound <= roundsToPlay) {
+                      boardHistory?.push({ type: HistorySliceType.ROUND_OVER, relatedTo: 'syslog', message: currentRound.toString() })
+                      this.broadcast({ action: 'roundOver' })
+
+                      setTimeout(() => {
+                        boardStats.currentRound = boardStats.currentRound + 1
+
+                        boardHistory?.push({ type: HistorySliceType.ROUND_STARTED, relatedTo: 'syslog', message: boardStats.currentRound.toString() })
+
+                        this.broadcast({ action: 'roundStarted', payload: boardStats.currentRound })
+                      }, 2000)
+
+                      setTimeout(async () => {
+                        const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
+
+                        try {
+                          isTurnOf = players[currentPlayersIndex + 1].username
+                        } catch(e) {
+                          isTurnOf = players[0].username
+                        }
+
+                        await this.state.storage.put('isTurnOf', isTurnOf)
+
+                        boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOf ?? 'no value?' })
+                        this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
+                      }, 4000)
+
+                    } else {
+                      const winner = players.reduce((previousPlayer, currentPlayer) => {
+                        if (previousPlayer.matchedPairs > currentPlayer.matchedPairs) {
+                          return previousPlayer
+                        } else {
+                          return currentPlayer
+                        }
+                      })
+  
+                      const { username, websocket } = winner
+                      
+                      boardHistory?.push({ type: HistorySliceType.ROUNDS_TO_PLAY_OVER, relatedTo: 'syslog' })
+
+                      setTimeout(async () => {
+                        boardHistory?.push({ type: HistorySliceType.OVERALL_RESULT, relatedTo: 'syslog' })
+                        await this.state.storage.put('boardHistory', boardHistory)
+
+                        this.broadcast({ action: 'youLost' }, username)
+                        websocket?.send(JSON.stringify({ action: 'youWon' }))
+                      }, 2000)
+                    }
                   }
                 } else {
                   const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
@@ -353,6 +450,7 @@ export class Ram {
                   }
 
                   this.broadcast({ action: 'noMatch' })
+                  boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOf ?? 'no value?' })
                   this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
                 }
 
@@ -366,7 +464,9 @@ export class Ram {
 
             this.broadcast({ action: 'flipCard', payload })
 
-            this.state.storage.put('deck', deck)
+            await this.state.storage.put('boardHistory', boardHistory)
+            await this.state.storage.put('boardStats', boardStats)
+            await this.state.storage.put('deck', deck)
             break;
         }
         
