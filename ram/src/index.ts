@@ -241,7 +241,7 @@ export class Ram {
             if (!playerAlreadyExists && cookie) {
               players.push({ username, cookie, matchedPairs: 0, incorrectTurns: 0 })
               
-              boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: username })
+              boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: 'syslog', message: `${username} joined the board` })
 
               // TODO: remove itsMe?
               this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectTurns: 0, itsMe: false } })
@@ -249,6 +249,7 @@ export class Ram {
   
             if (!isTurnOf) {
               isTurnOf = players[0].username
+              boardHistory.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: 'syslog', message: `Is turn of ${username}` })
             }
 
             boardStats.roundsToPlay = boardStats.roundsToPlay + 1
@@ -261,10 +262,12 @@ export class Ram {
                 matchedPairs: player.matchedPairs
               })),
               boardStats,
-              boardHistory: boardHistory.map(historySlice => ({
-                from: historySlice.relatedTo,
-                message: 'message'
-              }))
+              boardHistory: boardHistory.map(historySlice => {
+                return {
+                  from: historySlice.relatedTo,
+                  message: historySlice.message
+                }
+              })
             }
 
             await this.state.storage.put('players', players)
@@ -276,7 +279,7 @@ export class Ram {
           }
         }
 
-        await this.state.storage.put<HistorySlice[]>('boardHistory', [{ type: HistorySliceType.BOARD_CREATED, relatedTo: 'syslog' }])
+        await this.state.storage.put<HistorySlice[]>('boardHistory', [{ type: HistorySliceType.BOARD_CREATED, relatedTo: 'syslog', message: 'Board created' }])
         await this.state.storage.put('deck', shuffle(createChipSet(PAIRS)))
 
         const boardStats: BoardStats = {

@@ -130,7 +130,7 @@ export default function Board() {
     const [players, setPlayers] = useState<Player[]>(data.players ?? [])
     const [isTurnOf, setIsTurnOf] = useState<string | undefined>(data.isTurnOf)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
-    const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory)
+    const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory ?? [])
     const [boardStats, setBoardStats] = useState<any>(data.boardStats)
 
     useEffect(() => {
@@ -277,6 +277,12 @@ export default function Board() {
         socket.current?.send(JSON.stringify({ action: 'quickReaction', payload }))
     }
 
+    const restartBoard = () => {
+        if (boardStats.currentState === 'ableToRestart') {
+            socket.current?.send(JSON.stringify({ action: 'restartBoard' }))
+        }
+    }
+
     const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
 
     const chipSet = []
@@ -315,10 +321,17 @@ export default function Board() {
                     <RamCard key={username} itsMe={itsMe} username={username} ramCollected={matchedPairs} />
                 ))}
                 </div>
-                <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer">
-                    <input hidden value={boardId} name="ramToLeave" readOnly />
-                    <button className="font-semibold" type="submit">🌱 leave</button>
-                </Form>
+                <div className="flex flex-col gap-2">
+                    <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer">
+                        <input hidden value={boardId} name="ramToLeave" readOnly />
+                        <button className="font-semibold" type="submit">🌱 leave</button>
+                    </Form>
+                    <button 
+                        onClick={() => restartBoard()} 
+                        disabled={boardStats.currentState !== 'ableToRestart'}
+                        className={`${boardStats.currentState === 'ableToRestart' ? 'text-black hover:cursor-pointer border-black' : 'text-gray-300 hover:cursor-not-allowed border-gray-300'} font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 bg-gray-100 px-2 py-1 w-fit`}
+                    >🔁 restart board</button>
+                </div>
             </div>
             { showEnterUsernameModal && (
                 <Modal closeModal={() => setShowEnterUsernameModal(true)} >
