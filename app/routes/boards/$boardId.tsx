@@ -4,13 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import TrmCard from "~/components/Chip"
 import { useSubmit } from "@remix-run/react";
 import { constructUrlForDo } from "~/utils"
-import { useToast } from "~/contexts/ToastContext"
 import QuickReactions from "~/components/QuickReactions"
 import Chip from "~/components/Chip";
 import RamCard from "~/components/RamCard";
-import { ArrowRightIcon } from "@heroicons/react/outline";
 import Modal from "~/components/Modal";
-import Console from "~/components/ConsoleHistory";
 import ConsoleInput from "~/components/ConsoleInput";
 import ConsoleHistory from "~/components/ConsoleHistory";
 
@@ -34,11 +31,13 @@ export const loader: LoaderFunction = async ({ params, context, request }) => {
             method: 'POST'
         })
 
-        const { isTurnOf, players } = await response.json()
-        data = { ...data, hasSession: true, players, isTurnOf }
+        const { isTurnOf, players, boardHistory } = await response.json()
+        data = { ...data, hasSession: true, players, isTurnOf, boardHistory }
     } else {
         data = { ...data, hasSession: false }
     }
+
+    console.log(data)
     
     return json({ 
         ...data,
@@ -125,21 +124,19 @@ export default function Board() {
     const submit = useSubmit();
 
     const data = useLoaderData()
-    const { isPrivate, deck, hasSession, doHost, allowedPlayersInTotal } = data
+    const { deck, hasSession, doHost, boardStats } = data
 
     const [cards, setCards] = useState<TrmCard[]>(deck ?? [])
     const [players, setPlayers] = useState<Player[]>(data.players ?? [])
     const [isTurnOf, setIsTurnOf] = useState<string | undefined>(data.isTurnOf)
-    const [showYouWonModal, setShowYouWonModal] = useState(false)
-    const [showYouLostModal, setShowYouLostModal] = useState(false)
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
-    const [notifications, setNotficiations] = useState<any[]>([])
+    const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory)
 
     useEffect(() => {
         if (consoleInputRef.current) {
             consoleInputRef.current.scrollIntoView({ behavior: "smooth" })
         }
-    }, [notifications])
+    }, [boardHistory])
 
     useEffect(() => {
         if (hasSession) {
@@ -181,20 +178,31 @@ export default function Board() {
                     case 'quickReaction':
                         break
                     case 'pairFound':
+                        const { chipsToDeactivate, relatedTo } = payload
+
                         setCards(prevCards => {
                             let cards = prevCards.map(card => ({
                                 ...card,
                                 clicked: false,
-                                active: card.active ? !payload.includes(card.id) : card.active
+                                active: card.active ? !chipsToDeactivate.includes(card.id) : card.active
                             }))
     
                             return cards
+                        })
+
+                        setBoardHistory(prevHistory => {
+                            let history = prevHistory.map(historySlice => ({ ...historySlice }))
+                            
+                            history.push({ type: '', from: relatedTo, message: 'Found a pair!'})
+
+                            return history
                         })
 
                         break
     
                     case 'isTurnOf':
                         setIsTurnOf(payload)
+                        setBoardHistory(history => [...history, { type: '', from: 'syslog', message: `it's your turn ${payload}`}])
                         break
     
                     case 'incrementPairsOfPlayer':
@@ -209,11 +217,11 @@ export default function Board() {
                         break
     
                     case 'youWon':
-                        setShowYouWonModal(true)
+                        // setShowYouWonModal(true)
                         break
     
                     case 'youLost':
-                        setShowYouLostModal(true)
+                        // setShowYouLostModal(true)
                         break
                     
                     case 'noMatch':
@@ -253,8 +261,7 @@ export default function Board() {
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
 
     const sendQuickReaction = (payload: string) => {
-        socket.current?.send(JSON.stringify({ action: 'quickReaction', payload })) 
-        console.log('send')
+        socket.current?.send(JSON.stringify({ action: 'quickReaction', payload }))
     }
 
     const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
@@ -270,9 +277,9 @@ export default function Board() {
             <div className="flex flex-col gap-8 lg:max-w-[1024px] mx-auto my-0">
                 <div className="flex flex-col gap-8">
                     <div>
-                        <ConsoleHistory notifications={notifications} />
+                        <ConsoleHistory boardHistory={boardHistory} />
                         <div ref={consoleInputRef}>
-                            <ConsoleInput notification={notifications[0]} />
+                            <ConsoleInput currentHistorySlice={boardHistory[boardHistory.length - 1]} />
                         </div>
                     </div>
                     <div className="grid grid-cols-4 grid-rows-6 md:grid-cols-6 md:grid-rows-4 gap-4 justify-start">
