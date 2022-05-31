@@ -206,7 +206,7 @@ export default function Board() {
                         setBoardHistory(prevHistory => {
                             let history = prevHistory.map(historySlice => ({ ...historySlice }))
                             
-                            history.push({ type: '', from: relatedTo, message: 'Found a pair!'})
+                            history.push({ type: '', from: 'syslog', message: `${relatedTo} found a pair!`})
 
                             return history
                         })
@@ -230,11 +230,19 @@ export default function Board() {
                         break
     
                     case 'youWon':
-                        // setShowYouWonModal(true)
+                        setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
+                        setBoardHistory(prevHistory => [
+                            ...prevHistory,
+                            { type: '', from: 'syslog', message: 'You won!'}
+                        ])
                         break
     
                     case 'youLost':
-                        // setShowYouLostModal(true)
+                        setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
+                        setBoardHistory(prevHistory => [
+                            ...prevHistory,
+                            { type: '', from: 'syslog', message: 'You lost !'}
+                        ])
                         break
                     
                     case 'noMatch':
@@ -254,6 +262,11 @@ export default function Board() {
     
                             return players
                         })
+
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: '', from: 'syslog', message: `${username} joined`}
+                        ])
     
                         break
 
@@ -263,6 +276,11 @@ export default function Board() {
     
                             return players
                         })
+
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: '', from: 'syslog', message: `${payload} left`}
+                        ])
     
                         break
                 }

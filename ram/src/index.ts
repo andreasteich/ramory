@@ -392,8 +392,6 @@ export class Ram {
                   clickedCards[0].active = false
                   clickedCards[1].active = false
 
-                  console.log(clickedCards)
-
                   const pairsLeft = deck.find(card => card.active)
                   
                   if (pairsLeft === undefined) {
@@ -447,23 +445,22 @@ export class Ram {
                         }
                       })
   
-                      const { username, websocket } = winner
+                      const { cookie } = winner
+                      const serverSocket = this.connections.find(connection => connection.cookie === cookie)?.server
                       
                       boardHistory?.push({ type: HistorySliceType.ROUNDS_TO_PLAY_OVER, relatedTo: 'syslog' })
 
                       setTimeout(async () => {
                         boardHistory?.push({ type: HistorySliceType.OVERALL_RESULT, relatedTo: 'syslog' })
                         await this.state.storage.put('boardHistory', boardHistory)
+                        
+                        boardStats.currentState = 'ableToRestart'
+                        await this.state.storage.put('boardStats', boardStats)
 
-                        this.broadcast({ action: 'youLost' }, username)
-                        websocket?.send(JSON.stringify({ action: 'youWon' }))
+                        this.broadcast({ action: 'youLost', payload: boardStats.currentState }, cookie!)
+                        serverSocket?.send(JSON.stringify({ action: 'youWon', payload: boardStats.currentState }))
                       }, 2000)
                     }
-                  } else {
-                    setTimeout(() => {
-                      boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: playerToAdjust.username ?? 'no value?' })
-                      this.broadcast({ action: 'isTurnOf', payload: playerToAdjust.username })
-                    }, 1000)
                   }
                 } else {
                   const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
@@ -480,8 +477,6 @@ export class Ram {
                   await this.state.storage.put('boardHistory', boardHistory)
 
                   this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
-
-                  console.log('his', boardHistory)
                 }
 
                 deck.forEach(card => card.clicked = false)
