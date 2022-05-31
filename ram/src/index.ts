@@ -61,17 +61,17 @@ type TrmCard = {
 }
 
 enum HistorySliceType {
-  JOINED,
-  PAIR_FOUND,
-  LEFT,
-  BOARD_CREATED,
-  STARTED,
-  QUICK_REACTION,
-  IS_TURN_OF,
-  ROUND_OVER,
-  ROUND_STARTED,
-  ROUNDS_TO_PLAY_OVER,
-  OVERALL_RESULT
+  JOINED = 'JOINED',
+  PAIR_FOUND = 'PAIR_FOUND',
+  LEFT = 'LEFT',
+  BOARD_CREATED = 'BOARD_CREATED',
+  STARTED = 'STARTED',
+  QUICK_REACTION = 'QUICK_REACTION',
+  IS_TURN_OF = 'IS_TURN_OF',
+  ROUND_OVER = 'ROUND_OVER',
+  ROUND_STARTED = 'ROUND_STARTED',
+  ROUNDS_TO_PLAY_OVER = 'ROUNDS_TO_PLAY_OVER',
+  OVERALL_RESULT = 'OVERALL_RESULT'
 }
 
 type HistorySlice = {
@@ -216,12 +216,15 @@ export class Ram {
 
             let players = await this.state.storage.get<Player[]>('players') ?? []
             let isTurnOf = await this.state.storage.get('isTurnOf')
+            let boardStats = await this.state.storage.get<BoardStats>('boardStats') ?? { currentRound: 0, currentState: 'poweredOff', roundsToPlay: 0 }
+            let boardHistory = await this.state.storage.get<HistorySlice[]>('boardHistory') ?? []
         
             const data = {
-              isPrivate: true,
               isTurnOf,
               players,
-              deck
+              deck,
+              boardStats,
+              boardHistory
             }
   
             return new Response(JSON.stringify(data))
@@ -231,16 +234,14 @@ export class Ram {
             let players = await this.state.storage.get<Player[]>('players') ?? []
             let isTurnOf = await this.state.storage.get('isTurnOf')
             let boardStats = await this.state.storage.get<BoardStats>('boardStats') ?? { currentRound: 0, currentState: 'poweredOff', roundsToPlay: 0 }
-            
+            let boardHistory = await this.state.storage.get<HistorySlice[]>('boardHistory') ?? []
             
             const playerAlreadyExists = players.find(player => player.cookie === cookie)
-  
+
             if (!playerAlreadyExists && cookie) {
               players.push({ username, cookie, matchedPairs: 0, incorrectTurns: 0 })
-
-              let boardHistory = await this.state.storage.get<HistorySlice[]>('notifications') ?? []
+              
               boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: username })
-              await this.state.storage.put('boardHistory', boardHistory)
 
               // TODO: remove itsMe?
               this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectTurns: 0, itsMe: false } })
@@ -259,13 +260,17 @@ export class Ram {
                 itsMe: player.cookie === cookie, 
                 matchedPairs: player.matchedPairs
               })),
-              boardStats
-              // TODO: map notifications
+              boardStats,
+              boardHistory: boardHistory.map(historySlice => ({
+                from: historySlice.relatedTo,
+                message: 'message'
+              }))
             }
 
             await this.state.storage.put('players', players)
             await this.state.storage.put('isTurnOf', isTurnOf)
             await this.state.storage.put('boardStats', boardStats)
+            await this.state.storage.put('boardHistory', boardHistory)
   
             return new Response(JSON.stringify(data))
           }
@@ -369,8 +374,6 @@ export class Ram {
                 let isTurnOf = await this.state.storage.get<string>('isTurnOf')
 
                 if (clickedCards[0].imageUrl === clickedCards[1].imageUrl) {
-                  
-
                   const playerToAdjust = players.find(player => player.username === isTurnOf)
 
                   // TODO: throw error
@@ -380,20 +383,27 @@ export class Ram {
                   }
 
                   playerToAdjust.matchedPairs = playerToAdjust.matchedPairs + 1
-                  boardHistory?.push({ type: HistorySliceType.PAIR_FOUND, relatedTo: username ?? 'no value?' })
-                  this.broadcast({ action: 'pairFound', payload: { chipsToDeactivate: [clickedCards[0].id, clickedCards[1].id], playerToIncrement: playerToAdjust.username }})
+                  boardHistory?.push({ type: HistorySliceType.PAIR_FOUND, relatedTo: playerToAdjust.username ?? 'no value?' })
+                  this.broadcast({ action: 'pairFound', payload: { chipsToDeactivate: [clickedCards[0].id, clickedCards[1].id], relatedTo: playerToAdjust.username }})
 
                   clickedCards[0].active = false
                   clickedCards[1].active = false
 
-                  const allPairsFound = deck.find(card => card.active)
+                  console.log(clickedCards)
+
+                  const pairsLeft = deck.find(card => card.active)
                   
-                  if (allPairsFound) {
+                  if (pairsLeft === undefined) {
                     const { roundsToPlay, currentRound } = boardStats
 
                     if (currentRound <= roundsToPlay) {
-                      boardHistory?.push({ type: HistorySliceType.ROUND_OVER, relatedTo: 'syslog', message: currentRound.toString() })
-                      this.broadcast({ action: 'roundOver' })
+                      setTimeout(async () => {
+                        boardHistory?.push({ type: HistorySliceType.ROUND_OVER, relatedTo: 'syslog', message: currentRound.toString() })
+
+                        await this.state.storage.put('boardHistory', boardHistory)
+
+                        this.broadcast({ action: 'roundOver' })
+                      }, 2000)
 
                       setTimeout(() => {
                         boardStats.currentRound = boardStats.currentRound + 1
@@ -401,7 +411,7 @@ export class Ram {
                         boardHistory?.push({ type: HistorySliceType.ROUND_STARTED, relatedTo: 'syslog', message: boardStats.currentRound.toString() })
 
                         this.broadcast({ action: 'roundStarted', payload: boardStats.currentRound })
-                      }, 2000)
+                      }, 4000)
 
                       setTimeout(async () => {
                         const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
@@ -415,8 +425,10 @@ export class Ram {
                         await this.state.storage.put('isTurnOf', isTurnOf)
 
                         boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOf ?? 'no value?' })
+                        await this.state.storage.put('boardHistory', boardHistory)
+                        
                         this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
-                      }, 4000)
+                      }, 6000)
 
                     } else {
                       const winner = players.reduce((previousPlayer, currentPlayer) => {
@@ -439,6 +451,11 @@ export class Ram {
                         websocket?.send(JSON.stringify({ action: 'youWon' }))
                       }, 2000)
                     }
+                  } else {
+                    setTimeout(() => {
+                      boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: playerToAdjust.username ?? 'no value?' })
+                      this.broadcast({ action: 'isTurnOf', payload: playerToAdjust.username })
+                    }, 1000)
                   }
                 } else {
                   const currentPlayersIndex = players.findIndex(player => player.username === isTurnOf)
@@ -450,8 +467,13 @@ export class Ram {
                   }
 
                   this.broadcast({ action: 'noMatch' })
+
                   boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOf ?? 'no value?' })
+                  await this.state.storage.put('boardHistory', boardHistory)
+
                   this.broadcast({ action: 'isTurnOf', payload: isTurnOf })
+
+                  console.log('his', boardHistory)
                 }
 
                 deck.forEach(card => card.clicked = false)
