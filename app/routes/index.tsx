@@ -1,8 +1,5 @@
-import { ArrowRightIcon } from "@heroicons/react/outline";
 import { ActionFunction, redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
 import { useToast } from "~/contexts/ToastContext";
 import { constructUrlForDo } from "~/utils";
 
@@ -24,7 +21,7 @@ export default function Index() {
   return (
     <div className="grid grid-cols-1">
       <div className="flex flex-col bg-orange-400 gap-4 items-center border-b border-black px-8 py-16">
-        <p className="font-bold text-center">⛅️ Cloudfare Spring Developer Challenge 2022</p>
+        <p className="font-bold text-center">⛅️ Cloudflare Spring Developer Challenge 2022</p>
         <p className="text-sm text-center">Our submission for Cloudflare Spring Developer Challenge 2022, created with 🤙🏻 by @Andifined97 and @dev-hias</p>
       </div>
       <div className="flex flex-col gap-16 items-start border-y border-black px-8 py-16">
