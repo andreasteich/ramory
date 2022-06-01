@@ -8,7 +8,6 @@ import QuickReactions from "~/components/QuickReactions"
 import Chip from "~/components/Chip";
 import RamCard from "~/components/RamCard";
 import Modal from "~/components/Modal";
-import ConsoleInput from "~/components/ConsoleInput";
 import BoardHistory from "~/components/BoardHistory";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
@@ -138,28 +137,25 @@ export default function Board() {
             return orientation;
         }
 
-        setTimeout(() => setShowOrientationModal(getOrientation() === 'portrait'))
+        setShowOrientationModal(getOrientation() === 'portrait')
         
         window.onresize = function(){ setShowOrientationModal(getOrientation() === 'portrait') }
-    }, [])
 
-    useEffect(() => {
-        if (hasSession) {
-            if (process.env.NODE_ENV === 'production') {
-                window.addEventListener("beforeunload", (ev) => { 
-                    ev.preventDefault();
-        
-                    // TODO: throw error
-                    if (!boardId) { return }
-        
-                    const formData = new FormData()
-                    formData.append('ramToLeave', boardId)
-        
-                    submit(formData, { method: "post", action: "/leave-ram" });
-                    return ev.returnValue = 'Sure?'
-                });
+        const handleTabClose = (ev) => { 
+                ev.preventDefault();
+
+                // TODO: throw error
+                if (!boardId) { return }
+
+                const formData = new FormData()
+                formData.append('ramToLeave', boardId)
+
+                submit(formData, { method: "post", action: "/leave-ram" });
+
+                return ev.returnValue = 'Sure?'
             }
 
+        if (hasSession) {
             socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
 
             socket.current.onmessage = ({ data }) => {
@@ -314,7 +310,13 @@ export default function Board() {
                 }
     
             }
+
+            window.addEventListener("beforeunload", handleTabClose);
         }
+
+        return () => {
+            window.removeEventListener('beforeunload', handleTabClose);
+        };
     }, [])
 
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
