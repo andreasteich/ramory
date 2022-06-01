@@ -72,7 +72,9 @@ enum HistorySliceType {
   ROUND_STARTED = 'ROUND_STARTED',
   ROUNDS_TO_PLAY_OVER = 'ROUNDS_TO_PLAY_OVER',
   OVERALL_RESULT = 'OVERALL_RESULT',
-  NO_MATCH = 'NO_MATCH'
+  NO_MATCH = 'NO_MATCH',
+  NO_MATCH_WITH_WITHDRAW = 'NO_MATCH_WITH_WITHDRAW',
+  NO_MATCH_WITHOUT_WITHDRAW = 'NO_MATCH_WITHOUT_WITHDRAW'
 }
 
 type HistorySlice = {
@@ -471,13 +473,22 @@ export class Ram {
 
                   if (!playerToAdjust) return
 
-                  playerToAdjust.incorrectMatches = playerToAdjust.incorrectMatches + 1
-                  await this.state.storage.put('players', players)
+                  const totalPlayersRam = playerToAdjust.matchedPairs * 1000 - playerToAdjust.incorrectMatches * 100
 
-                  boardHistory?.push({ type: HistorySliceType.NO_MATCH, relatedTo: playerToAdjust.username ?? 'no value?' })
-                  await this.state.storage.put('boardHistory', boardHistory)
+                  if (totalPlayersRam > 0) {
+                    playerToAdjust.incorrectMatches = playerToAdjust.incorrectMatches + 1
+                    await this.state.storage.put('players', players)
 
-                  this.broadcast({ action: 'noMatch', payload: { relatedTo: playerToAdjust.username, incorrectMatches: playerToAdjust.incorrectMatches }})
+                    boardHistory?.push({ type: HistorySliceType.NO_MATCH_WITH_WITHDRAW, relatedTo: playerToAdjust.username ?? 'no value?' })
+                    await this.state.storage.put('boardHistory', boardHistory)
+
+                    this.broadcast({ action: 'noMatchWithWithdraw', payload: { relatedTo: playerToAdjust.username, incorrectMatches: playerToAdjust.incorrectMatches }})
+                  } else {
+                    boardHistory?.push({ type: HistorySliceType.NO_MATCH_WITHOUT_WITHDRAW, relatedTo: playerToAdjust.username ?? 'no value?' })
+                    await this.state.storage.put('boardHistory', boardHistory)
+  
+                    this.broadcast({ action: 'noMatchWithoutWithdraw', payload: { relatedTo: playerToAdjust.username }})
+                  }
                   
                   try {
                     isTurnOf = players[currentPlayersIndex + 1].username
