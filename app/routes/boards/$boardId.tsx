@@ -9,7 +9,7 @@ import Chip from "~/components/Chip";
 import RamCard from "~/components/RamCard";
 import Modal from "~/components/Modal";
 import ConsoleInput from "~/components/ConsoleInput";
-import ConsoleHistory from "~/components/ConsoleHistory";
+import BoardHistory from "~/components/BoardHistory";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -117,7 +117,6 @@ export default function Board() {
     ]
 
     const socket = useRef<WebSocket>()
-    const consoleInputRef = useRef<HTMLInputElement>(null)
 
     const { boardId } = useParams()
     const submit = useSubmit();
@@ -131,12 +130,6 @@ export default function Board() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
     const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory ?? [])
     const [boardStats, setBoardStats] = useState<any>(data.boardStats)
-
-    useEffect(() => {
-        if (consoleInputRef.current) {
-            consoleInputRef.current.scrollIntoView({ behavior: "smooth" })
-        }
-    }, [boardHistory])
 
     useEffect(() => {
         if (hasSession) {
@@ -333,16 +326,10 @@ export default function Board() {
     }
 
     return (
-        <div className="p-8 bg-gray-800 gap-8">
-            <div className="flex flex-col gap-8 lg:max-w-[1024px] mx-auto my-0">
-                <div className="flex flex-col gap-8">
-                    <div>
-                        <ConsoleHistory boardHistory={boardHistory} />
-                        <div ref={consoleInputRef}>
-                            <ConsoleInput currentHistorySlice={boardHistory[boardHistory.length - 1]} />
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-4 grid-rows-6 md:grid-cols-6 md:grid-rows-4 gap-4 justify-start">
+        <div className="p-8 bg-gray-800">
+            <div className="lg:max-w-[1024px] mx-auto my-0 flex flex-col gap-8">
+                <div className="grid grid-cols-3 gap-8">
+                    <div className="grid col-span-2 grid-cols-6 grid-rows-4 gap-4 justify-start">
                     { cards.map(({ id, clicked, imageUrl, active }) => (
                         <Chip 
                             key={id}
@@ -355,22 +342,23 @@ export default function Board() {
                         />
                     )) }
                     </div>
-                    <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
+                    <BoardHistory boardHistory={boardHistory} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 { players.map(({ username, itsMe, matchedPairs, incorrectMatches }) => (
                     <RamCard key={username} itsMe={itsMe} username={username} matchedPairs={matchedPairs} incorrectMatches={incorrectMatches} />
                 ))}
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-row gap-2">
                     <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer">
                         <input hidden value={boardId} name="ramToLeave" readOnly />
-                        <button className="font-semibold" type="submit">🌱 leave</button>
+                        <button className="font-semibold text-sm" type="submit">🌱 leave</button>
                     </Form>
                     <button 
                         onClick={() => restartBoard()} 
                         disabled={boardStats.currentState !== 'ableToRestart'}
-                        className={`${boardStats.currentState === 'ableToRestart' ? 'text-black hover:cursor-pointer border-black' : 'text-gray-300 hover:cursor-not-allowed border-gray-300'} font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 bg-gray-100 px-2 py-1 w-fit`}
+                        className={`${boardStats.currentState === 'ableToRestart' ? 'text-black hover:cursor-pointer border-black' : 'text-gray-300 hover:cursor-not-allowed border-gray-300'} text-sm font-semibold shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 bg-gray-100 px-2 py-1 w-fit`}
                     >🔁 restart board</button>
                 </div>
             </div>

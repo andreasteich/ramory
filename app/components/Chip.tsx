@@ -14,7 +14,7 @@ export default function Chip({ id, clicked, imageUrl, active, isMyTurn, chipClic
     return (
         <motion.div 
             key={id}
-            className={`shadow-[1px_1px_0_0_rgba(0,0,0,1)] border-2 ${isMyTurn && active ? 'border-green-500' : 'border-black'} hover:cursor-pointer h-full ${active && 'bg-neutral-400'} flex flex-col justify-center`}
+            className={`shadow-[1px_1px_0_0_rgba(0,0,0,1)] border-2 ${isMyTurn && active ? 'border-green-500' : 'border-black'} hover:cursor-pointer ${active && 'bg-neutral-400'} flex flex-col justify-center`}
             onClick={isMyTurn && active ? () => chipClicked(id) : () => {}}
             initial="hidden"
             whileInView="visible"
