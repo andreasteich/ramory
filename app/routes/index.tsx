@@ -1,6 +1,5 @@
 import { ActionFunction, redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
-import { useToast } from "~/contexts/ToastContext";
 import { constructUrlForDo } from "~/utils";
 
 export const action: ActionFunction = async ({ context, request }) => {
@@ -16,8 +15,6 @@ export const action: ActionFunction = async ({ context, request }) => {
 }
 
 export default function Index() {
-  const { addToast } = useToast();
-
   return (
     <div className="grid grid-cols-1">
       <div className="flex flex-col bg-orange-400 gap-4 items-center border-b border-black px-8 py-16">
