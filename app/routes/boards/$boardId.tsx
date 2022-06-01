@@ -130,6 +130,18 @@ export default function Board() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
     const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory ?? [])
     const [boardStats, setBoardStats] = useState<any>(data.boardStats)
+    const [showOrientationModal, setShowOrientationModal] = useState<boolean>(true)
+
+    useEffect(() => {
+        function getOrientation(){
+            var orientation = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
+            return orientation;
+        }
+
+        setTimeout(() => setShowOrientationModal(getOrientation() === 'portrait'))
+        
+        window.onresize = function(){ setShowOrientationModal(getOrientation() === 'portrait') }
+    }, [])
 
     useEffect(() => {
         if (hasSession) {
@@ -369,6 +381,12 @@ export default function Board() {
                         <input type="text" placeholder="Enter username" name="username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
                         <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's go!</button>
                     </Form>
+                </Modal>
+            )}
+            { showOrientationModal && (
+                <Modal closeModal={() => setShowEnterUsernameModal(true)} >
+                    <h1>Wrong orientation</h1>
+                    <p>Please turn your device into landscape mode to get the best experience possible</p>
                 </Modal>
             )}
         </div>
