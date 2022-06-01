@@ -166,7 +166,10 @@ export default function Board() {
 
                         setCards(chipSet)
                         setBoardStats(prevStats => ({ ...prevStats, currentRound }))
-                        setBoardHistory(history => [...history, { type: '', from: 'syslog', message: `Round ${boardStats.currentRound}/${boardStats.roundsToPlay} started, good luck!`}])
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: 'info', from: 'syslog', message: `Round ${boardStats.currentRound}/${boardStats.roundsToPlay} started, good luck!` }
+                        ])
 
                         break
                     case 'flipCard':
@@ -186,11 +189,11 @@ export default function Board() {
                     case 'quickReaction':
                         setBoardHistory(history => [
                             ...history, 
-                            { type: '', from: payload.relatedTo, message: payload.message }
+                            { type: 'quickReaction', from: payload.relatedTo, message: payload.message }
                         ])
                         break
                     case 'pairFound':
-                        const { chipsToDeactivate, relatedTo, pairs } = payload
+                        const { chipsToDeactivate, relatedTo } = payload
 
                         setCards(prevCards => {
                             let cards = prevCards.map(card => ({
@@ -214,7 +217,7 @@ export default function Board() {
                         setBoardHistory(prevHistory => {
                             let history = prevHistory.map(historySlice => ({ ...historySlice }))
                             
-                            history.push({ type: '', from: 'syslog', message: `${relatedTo} found a pair!`})
+                            history.push({ type: 'pairFound', from: 'syslog', message: `${relatedTo} found a pair, try again ${relatedTo}!`})
 
                             return history
                         })
@@ -223,14 +226,17 @@ export default function Board() {
     
                     case 'isTurnOf':
                         setIsTurnOf(payload)
-                        setBoardHistory(history => [...history, { type: '', from: 'syslog', message: `it's your turn ${payload}`}])
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: 'info', from: 'syslog', message: `it's your turn ${payload}` }
+                        ])
                         break
     
                     case 'youWon':
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: '', from: 'syslog', message: 'You won!'}
+                            { type: 'info', from: 'syslog', message: 'You won!'}
                         ])
                         break
     
@@ -238,11 +244,11 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: '', from: 'syslog', message: 'You lost !'}
+                            { type: 'info', from: 'syslog', message: 'You lost !'}
                         ])
                         break
                     
-                    case 'noMatch':
+                    case 'noMatchWithWithdraw':
                         setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
                         setPlayers(prevPlayers => {
                             let players = prevPlayers.map(player => ({
@@ -254,7 +260,15 @@ export default function Board() {
                         })
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: '', from: 'syslog', message: `No match! -100mb for ${payload.relatedTo}`}
+                            { type: 'noMatch', from: 'syslog', message: `No match! -100mb for ${payload.relatedTo}`}
+                        ])
+                        break
+
+                    case 'noMatchWithoutWithdraw':
+                        setCards(prevCards => prevCards.map(card => ({ ...card, clicked: false })))
+                        setBoardHistory(prevHistory => [
+                            ...prevHistory,
+                            { type: 'noMatch', from: 'syslog', message: `No match! Not able to withdraw RAM from ${payload.relatedTo}`}
                         ])
                         break
                     
@@ -274,7 +288,7 @@ export default function Board() {
 
                         setBoardHistory(history => [
                             ...history, 
-                            { type: '', from: 'syslog', message: `${username} joined`}
+                            { type: 'info', from: 'syslog', message: `${username} joined`}
                         ])
     
                         break
@@ -288,7 +302,7 @@ export default function Board() {
 
                         setBoardHistory(history => [
                             ...history, 
-                            { type: '', from: 'syslog', message: `${payload} left`}
+                            { type: 'info', from: 'syslog', message: `${payload} left`}
                         ])
     
                         break
