@@ -24,8 +24,8 @@ export default function QuickReactions({ reactions, sendQuickReaction }: Props) 
     }, [sendingPossible])
 
     return (
-        <div className="flex flex-row justify-between">
-            { reactions.map(({ label, value }) => (
+        <div className="flex flex-row justify-between gap-2 items-center">
+        { reactions.map(({ label, value }) => (
             <motion.p
                 key={value}
                 onClick={() => handleSend(value)}
