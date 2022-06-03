@@ -6,7 +6,6 @@ type Props = {
 }
 
 export default function RamCard({ username, matchedPairs, incorrectMatches, itsMe }: Props) {
-    console.log(matchedPairs, incorrectMatches)
     const ramCollected = 1000 * matchedPairs - 100 * incorrectMatches
 
     return (
