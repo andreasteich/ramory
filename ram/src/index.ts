@@ -479,7 +479,7 @@ export class Ram {
                 await this.state.storage.put('deck', deck)
                 await this.state.storage.put('players', players)
                 await this.state.storage.put('isTurnOf', isTurnOf)
-              }, 2000)
+              }, 1500)
             }
 
             await this.state.storage.put('boardHistory', boardHistory)
