@@ -229,7 +229,7 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: 'info', from: 'syslog', message: 'You won, click "restart board" to start again!'}
+                            { type: 'end', from: 'syslog', message: 'You won, click "restart board" to start again!'}
                         ])
                         break
     
@@ -237,7 +237,7 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: 'info', from: 'syslog', message: 'You lost, click "restart board" to start again!'}
+                            { type: 'end', from: 'syslog', message: 'You lost, click "restart board" to start again!'}
                         ])
                         break
                     
