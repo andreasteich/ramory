@@ -1,5 +1,5 @@
 import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
-import { Form, useLoaderData, useParams } from "@remix-run/react"
+import { Form, Link, useLoaderData, useParams } from "@remix-run/react"
 import { useEffect, useRef, useState } from "react"
 import TrmCard from "~/components/Chip"
 import { useSubmit } from "@remix-run/react";
@@ -10,7 +10,6 @@ import RamCard from "~/components/RamCard";
 import Modal from "~/components/Modal";
 import BoardHistory from "~/components/BoardHistory";
 import { DesktopComputerIcon } from '@heroicons/react/outline'
-import { Link } from "react-router-dom";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -131,32 +130,8 @@ export default function Board() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
     const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory ?? [])
     const [boardStats, setBoardStats] = useState<any>(data.boardStats)
-    const [showOrientationModal, setShowOrientationModal] = useState<boolean>(true)
 
     useEffect(() => {
-        function getOrientation(){
-            var orientation = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
-            return orientation;
-        }
-
-        setShowOrientationModal(getOrientation() === 'portrait')
-        
-        window.onresize = function(){ setShowOrientationModal(getOrientation() === 'portrait') }
-
-        const handleTabClose = (ev) => { 
-                ev.preventDefault();
-
-                // TODO: throw error
-                if (!boardId) { return }
-
-                const formData = new FormData()
-                formData.append('ramToLeave', boardId)
-
-                submit(formData, { method: "post", action: "/leave-ram" });
-
-                return ev.returnValue = 'Sure?'
-            }
-
         if (hasSession) {
             socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
 
@@ -250,7 +225,7 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: 'info', from: 'syslog', message: 'You won!'}
+                            { type: 'info', from: 'syslog', message: 'You won, click "restart board" to start again!'}
                         ])
                         break
     
@@ -258,7 +233,7 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: 'info', from: 'syslog', message: 'You lost !'}
+                            { type: 'info', from: 'syslog', message: 'You lost, click "restart board" to start again!'}
                         ])
                         break
                     
@@ -353,26 +328,24 @@ export default function Board() {
     return (
         <div className="p-8 bg-gray-800">
             <div className="lg:max-w-[1024px] mx-auto my-0 flex flex-col gap-8 justify-between">
-                <div className="grid grid-cols-3 gap-8">
-                    <div className="col-span-2">
-                        <div className="grid  grid-cols-6 grid-rows-4 gap-4">
-                        { cards.map(({ id, clicked, imageUrl, active }) => (
-                            <Chip 
-                                key={id}
-                                id={id}
-                                clicked={clicked}
-                                isMyTurn={isMyTurn}
-                                imageUrl={imageUrl}
-                                active={active}
-                                chipClicked={flipCard}
-                            />
-                        )) }
-                        </div>
-                    </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <BoardHistory boardHistory={boardHistory} />
+                    <div className="lg:col-span-2 grid grid-cols-4 grid-rows-6 md:grid-cols-6 md:grid-rows-4 gap-4 h-fit">
+                    { cards.map(({ id, clicked, imageUrl, active }) => (
+                        <Chip 
+                            key={id}
+                            id={id}
+                            clicked={clicked}
+                            isMyTurn={isMyTurn}
+                            imageUrl={imageUrl}
+                            active={active}
+                            chipClicked={flipCard}
+                        />
+                    )) }
+                    </div>
                 </div>
                 <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-4">
                 { players.map(({ username, itsMe, matchedPairs, incorrectMatches }) => (
                     <RamCard key={username} itsMe={itsMe} username={username} matchedPairs={matchedPairs} incorrectMatches={incorrectMatches} />
                 ))}
@@ -398,15 +371,6 @@ export default function Board() {
                         <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's go!</button>
                     </Form>
                 </Modal>
-            )}
-            { showOrientationModal && (
-                <div className="fixed left-0 top-0 w-full h-full bg-gray-50/95 z-1 flex flex-col items-center">
-                    <div className="rounded-lg p-10 mx-[5%] my-[10%] flex flex-col gap-5 lg:w-[1024px]">
-                        <h1 className="text-xl font-bold text-gray-500">Wrong orientation 😢</h1>
-                        <DesktopComputerIcon className="h-20 text-gray-500" />
-                        <p className="text-sm text-gray-500">Please <strong className="text-black">turn your device into landscape mode</strong> to get the best experience possible</p>
-                    </div>
-                </div>
             )}
         </div>
     )

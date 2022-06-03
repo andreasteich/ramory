@@ -344,6 +344,8 @@ export class Ram {
 
             const clickedCards = deck.filter(card => card.clicked)
 
+            if (clickedCards.length <= 2) { this.broadcast({ action: 'flipCard', payload }) }
+
             let players = await this.state.storage.get<Player[]>('players') ?? []
 
             if (clickedCards.length === 2) {
@@ -477,10 +479,8 @@ export class Ram {
                 await this.state.storage.put('deck', deck)
                 await this.state.storage.put('players', players)
                 await this.state.storage.put('isTurnOf', isTurnOf)
-              }, 1000)
+              }, 2000)
             }
-
-            this.broadcast({ action: 'flipCard', payload })
 
             await this.state.storage.put('boardHistory', boardHistory)
             await this.state.storage.put('boardStats', boardStats)
@@ -527,7 +527,7 @@ export class Ram {
               await this.state.storage.put('boardHistory', boardHistory)
 
               this.broadcast({ action: 'isTurnOf', payload: isTurnOfRestart })
-            }, 2000)
+            }, 1500)
 
             break
         }
