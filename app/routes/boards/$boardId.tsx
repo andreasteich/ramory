@@ -142,7 +142,10 @@ export default function Board() {
                     case 'restartBoard':
                         console.log(payload)
                         setCards(payload.deck)
-                        setPlayers(payload.players)
+                        setPlayers(payload.players.map(player => ({
+                            ...player,
+                            itsMe: player.username === username
+                        })))
                         setBoardStats(payload.boardStats)
                         setBoardHistory(history => [
                             ...history, 
