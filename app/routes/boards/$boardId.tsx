@@ -163,6 +163,16 @@ export default function Board() {
                 const { action, payload } = JSON.parse(data)
                 
                 switch (action) {
+                    case 'restartBoard':
+                        console.log(payload)
+                        setCards(payload.deck)
+                        setPlayers(payload.players)
+                        setBoardStats(payload.boardStats)
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: 'info', from: 'syslog', message: `Board restarted!` }
+                        ])
+                        break
                     case 'roundStarted':
                         const { currentRound, chipSet } = payload
 
@@ -227,6 +237,7 @@ export default function Board() {
                         break
     
                     case 'isTurnOf':
+                        console.log(players)
                         setIsTurnOf(payload)
                         setBoardHistory(history => [
                             ...history, 
@@ -334,30 +345,32 @@ export default function Board() {
         }
     }
 
-    const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
-
     const chipSet = []
 
     for (let i = 0; i < 24; i++) {
         chipSet.push(<img src="/silicon.png" className="object-scale-down"/>)
     }
 
+    const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
+
     return (
         <div className="p-8 bg-gray-800">
             <div className="lg:max-w-[1024px] mx-auto my-0 flex flex-col gap-8 justify-between">
                 <div className="grid grid-cols-3 gap-8">
-                    <div className="grid col-span-2 grid-cols-6 grid-rows-4 gap-4 items-start h-fit">
-                    { cards.map(({ id, clicked, imageUrl, active }) => (
-                        <Chip 
-                            key={id}
-                            id={id}
-                            clicked={clicked}
-                            isMyTurn={isMyTurn}
-                            imageUrl={imageUrl}
-                            active={active}
-                            chipClicked={flipCard}
-                        />
-                    )) }
+                    <div className="col-span-2">
+                        <div className="grid  grid-cols-6 grid-rows-4 gap-4">
+                        { cards.map(({ id, clicked, imageUrl, active }) => (
+                            <Chip 
+                                key={id}
+                                id={id}
+                                clicked={clicked}
+                                isMyTurn={isMyTurn}
+                                imageUrl={imageUrl}
+                                active={active}
+                                chipClicked={flipCard}
+                            />
+                        )) }
+                        </div>
                     </div>
                     <BoardHistory boardHistory={boardHistory} />
                 </div>
