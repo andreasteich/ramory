@@ -10,6 +10,7 @@ import RamCard from "~/components/RamCard";
 import Modal from "~/components/Modal";
 import BoardHistory from "~/components/BoardHistory";
 import { DesktopComputerIcon } from '@heroicons/react/outline'
+import { Link } from "react-router-dom";
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -320,17 +321,8 @@ export default function Board() {
     
                         break
                 }
-    
-            }
-
-            if (process.env.NODE_ENV !== 'development') {
-                window.addEventListener("beforeunload", handleTabClose);
             }
         }
-
-        return () => {
-            window.removeEventListener('beforeunload', handleTabClose);
-        };
     }, [])
 
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
@@ -343,6 +335,10 @@ export default function Board() {
         if (boardStats.currentState === 'ableToRestart') {
             socket.current?.send(JSON.stringify({ action: 'restartBoard' }))
         }
+    }
+
+    const leaveBoard = () => {
+        socket.current?.close()
     }
 
     const chipSet = []
@@ -381,10 +377,11 @@ export default function Board() {
                 ))}
                 </div>
                 <div className="flex flex-row gap-2">
-                    <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer">
-                        <input hidden value={boardId} name="ramToLeave" readOnly />
-                        <button className="font-semibold text-sm" type="submit">🌱 leave</button>
-                    </Form>
+                    <Link 
+                        to="/"
+                        onClick={() => leaveBoard()}
+                        className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer font-semibold text-sm"
+                    >🌱 leave</Link>
                     <button 
                         onClick={() => restartBoard()} 
                         disabled={boardStats.currentState !== 'ableToRestart'}
