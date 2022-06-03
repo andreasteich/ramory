@@ -217,7 +217,7 @@ export class Ram {
               boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: 'syslog', message: `${username} joined the board` })
 
               // TODO: remove itsMe?
-              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectTurns: 0, itsMe: false } })
+              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectMatches: 0, itsMe: false } })
             }
   
             if (!isTurnOf) {
