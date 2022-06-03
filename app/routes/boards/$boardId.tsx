@@ -309,14 +309,15 @@ export default function Board() {
 
                     case 'playerLeft':
                         setPlayers(prevPlayers => {
-                            let players = prevPlayers.filter(player => player.username !== payload)
+                            let players = prevPlayers.filter(player => player.username !== payload.relatedTo)
     
                             return players
                         })
+                        setBoardStats(payload.boardStats)
 
                         setBoardHistory(history => [
                             ...history, 
-                            { type: 'info', from: 'syslog', message: `${payload} left`}
+                            { type: 'info', from: 'syslog', message: `${payload.relatedTo} left`}
                         ])
     
                         break
