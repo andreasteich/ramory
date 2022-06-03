@@ -89,7 +89,7 @@ type BoardStats = {
   currentRound: number
 }
 
-const PAIRS: string[] = ['🫐', '🫒', '🍕', '🥩', '🫑', '🥥', '🧄', '🥖', '🥫', '🥕', '🍟', '🍇']
+const PAIRS: string[] = ['🥨', '🍉', '🍕', '🥩', '🥑', '🥥', '🧄', '🥖', '🥫', '🥕', '🍟', '🍇']
 
 function shuffle(array: TrmCard[]) {
   let counter = array.length;
