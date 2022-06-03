@@ -9,6 +9,7 @@ import Chip from "~/components/Chip";
 import RamCard from "~/components/RamCard";
 import Modal from "~/components/Modal";
 import BoardHistory from "~/components/BoardHistory";
+import { DesktopComputerIcon } from '@heroicons/react/outline'
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
@@ -311,7 +312,9 @@ export default function Board() {
     
             }
 
-            window.addEventListener("beforeunload", handleTabClose);
+            if (process.env.NODE_ENV !== 'development') {
+                window.addEventListener("beforeunload", handleTabClose);
+            }
         }
 
         return () => {
@@ -341,9 +344,9 @@ export default function Board() {
 
     return (
         <div className="p-8 bg-gray-800">
-            <div className="lg:max-w-[1024px] mx-auto my-0 flex flex-col gap-8">
+            <div className="lg:max-w-[1024px] mx-auto my-0 flex flex-col gap-8 justify-between">
                 <div className="grid grid-cols-3 gap-8">
-                    <div className="grid col-span-2 grid-cols-6 grid-rows-4 gap-4 justify-start">
+                    <div className="grid col-span-2 grid-cols-6 grid-rows-4 gap-4 items-start h-fit">
                     { cards.map(({ id, clicked, imageUrl, active }) => (
                         <Chip 
                             key={id}
@@ -386,10 +389,13 @@ export default function Board() {
                 </Modal>
             )}
             { showOrientationModal && (
-                <Modal closeModal={() => setShowEnterUsernameModal(true)} >
-                    <h1>Wrong orientation</h1>
-                    <p>Please turn your device into landscape mode to get the best experience possible</p>
-                </Modal>
+                <div className="fixed left-0 top-0 w-full h-full bg-gray-50/95 z-1 flex flex-col items-center">
+                    <div className="rounded-lg p-10 mx-[5%] my-[10%] flex flex-col gap-5 lg:w-[1024px]">
+                        <h1 className="text-xl font-bold text-gray-500">Wrong orientation 😢</h1>
+                        <DesktopComputerIcon className="h-20 text-gray-500" />
+                        <p className="text-sm text-gray-500">Please <strong className="text-black">turn your device into landscape mode</strong> to get the best experience possible</p>
+                    </div>
+                </div>
             )}
         </div>
     )
