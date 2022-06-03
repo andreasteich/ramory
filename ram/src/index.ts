@@ -487,14 +487,12 @@ export class Ram {
             await this.state.storage.put('deck', deck)
             break;
           case 'restartBoard':
-            const renewedCookie = this.connections.find(connection => connection.server === webSocket)?.cookie
             const refreshedDeck = shuffle(createChipSet(PAIRS))
             await this.state.storage.put('deck', refreshedDeck)
 
             let playersCurrent = await this.state.storage.get<Player[]>('players') ?? []
             playersCurrent = playersCurrent.map(player => ({
-              username: player.username, 
-              itsMe: player.cookie === renewedCookie, 
+              username: player.username,
               matchedPairs: 0,
               incorrectMatches: 0
             }))
