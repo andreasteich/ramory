@@ -157,6 +157,7 @@ export default function Board() {
 
                         setCards(chipSet)
                         setBoardStats(prevStats => ({ ...prevStats, currentRound }))
+                        console.log('stats', boardStats)
                         setBoardHistory(history => [
                             ...history, 
                             { type: 'info', from: 'syslog', message: `Round ${boardStats.currentRound}/${boardStats.roundsToPlay} started, good luck!` }
@@ -277,6 +278,8 @@ export default function Board() {
     
                             return players
                         })
+                        console.log(payload.roundsToPlay)
+                        setBoardStats(prevStats => ({ ...prevStats, roundsToPlay: payload.roundsToPlay }))
 
                         setBoardHistory(history => [
                             ...history, 

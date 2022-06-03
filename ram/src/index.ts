@@ -211,21 +211,21 @@ export class Ram {
             
             const playerAlreadyExists = players.find(player => player.cookie === cookie)
 
+            boardStats.roundsToPlay = boardStats.roundsToPlay + 1
+
             if (!playerAlreadyExists && cookie) {
               players.push({ username, cookie, matchedPairs: 0, incorrectMatches: 0 })
               
               boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: 'syslog', message: `${username} joined the board` })
 
               // TODO: remove itsMe?
-              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectMatches: 0, itsMe: false } })
+              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectMatches: 0, itsMe: false, roundsToPlay: boardStats.roundsToPlay } })
             }
   
             if (!isTurnOf) {
               isTurnOf = players[0].username
               boardHistory.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: 'syslog', message: `Is turn of ${username}` })
             }
-
-            boardStats.roundsToPlay = boardStats.roundsToPlay + 1
   
             const data = {
               isTurnOf,
