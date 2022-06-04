@@ -7,13 +7,11 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import ToastContainer from "./components/ToastContainer";
-import ToastProvider from "./contexts/ToastContext";
 import styles from "./tailwind.css";
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
-  title: "New Remix App",
+  title: "RAMory 🎸",
   viewport: "width=device-width,initial-scale=1",
 });
 
