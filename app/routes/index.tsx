@@ -19,7 +19,7 @@ export default function Index() {
     <div className="grid grid-cols-1">
       <div className="flex flex-col bg-orange-400 gap-4 items-center border-b border-black px-8 py-16">
         <p className="font-bold text-center">⛅️ Cloudflare Spring Developer Challenge 2022</p>
-        <p className="text-sm text-center">Our submission for Cloudflare Spring Developer Challenge 2022, created with 🤙🏻 by <a href="https://twitter.com/Andifined97" target="_blank">@Andifined97</a> and <a href="https://twitter.com/MatthiasSiml" target="_blank">@dev-hias</a></p>
+        <p className="text-sm text-center">Our submission for Cloudflare Spring Developer Challenge 2022, created with 🤙🏻 by <a href="https://twitter.com/Andifined97" target="_blank" className="text-blue-500" >@</a><a href="https://twitter.com/Andifined97" target="_blank" className="text-blue-500 underline" >Andifined97</a> and <a href="https://twitter.com/MatthiasSiml" target="_blank" className="text-blue-500">@</a><a href="https://twitter.com/MatthiasSiml" target="_blank" className="text-blue-500 underline">dev-hias</a></p>
       </div>
       <div className="flex flex-col gap-16 items-start border-y border-black px-8 py-16">
         <p className="text-4xl">RAMory 🎸</p>
