@@ -1,4 +1,4 @@
-import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
+import { ActionFunction, json, LoaderFunction, MetaFunction, redirect } from "@remix-run/cloudflare"
 import { Form, Link, useLoaderData, useParams } from "@remix-run/react"
 import { useEffect, useRef, useState } from "react"
 import TrmCard from "~/components/Chip"
@@ -10,6 +10,12 @@ import RamCard from "~/components/RamCard";
 import Modal from "~/components/Modal";
 import BoardHistory from "~/components/BoardHistory";
 import { DesktopComputerIcon } from '@heroicons/react/outline'
+
+export const meta: MetaFunction = ({ params }) => ({
+    charset: "utf-8",
+    title: `RAMory 🎸 | board ${params.boardId}`,
+    viewport: "width=device-width,initial-scale=1",
+  });
 
 export const loader: LoaderFunction = async ({ params, context, request }) => {
     const { boardId } = params
