@@ -1,5 +1,5 @@
 import { ActionFunction, json, LoaderFunction, redirect } from "@remix-run/cloudflare"
-import { Form, useLoaderData, useParams } from "@remix-run/react"
+import { Form, Link, useLoaderData, useParams } from "@remix-run/react"
 import { useEffect, useRef, useState } from "react"
 import TrmCard from "~/components/Chip"
 import { useSubmit } from "@remix-run/react";
@@ -130,32 +130,8 @@ export default function Board() {
     const [showEnterUsernameModal, setShowEnterUsernameModal] = useState(!hasSession)
     const [boardHistory, setBoardHistory] = useState<any[]>(data.boardHistory ?? [])
     const [boardStats, setBoardStats] = useState<any>(data.boardStats)
-    const [showOrientationModal, setShowOrientationModal] = useState<boolean>(true)
 
     useEffect(() => {
-        function getOrientation(){
-            var orientation = window.innerWidth > window.innerHeight ? "landscape" : "portrait";
-            return orientation;
-        }
-
-        setShowOrientationModal(getOrientation() === 'portrait')
-        
-        window.onresize = function(){ setShowOrientationModal(getOrientation() === 'portrait') }
-
-        const handleTabClose = (ev) => { 
-                ev.preventDefault();
-
-                // TODO: throw error
-                if (!boardId) { return }
-
-                const formData = new FormData()
-                formData.append('ramToLeave', boardId)
-
-                submit(formData, { method: "post", action: "/leave-ram" });
-
-                return ev.returnValue = 'Sure?'
-            }
-
         if (hasSession) {
             socket.current = new WebSocket(constructUrlForDo(doHost, `websocket/${boardId}?player=${document.cookie}`, true))
 
@@ -163,11 +139,25 @@ export default function Board() {
                 const { action, payload } = JSON.parse(data)
                 
                 switch (action) {
+                    case 'restartBoard':
+                        console.log(payload)
+                        setCards(payload.deck)
+                        setPlayers(payload.players.map(player => ({
+                            ...player,
+                            itsMe: player.username === username
+                        })))
+                        setBoardStats(payload.boardStats)
+                        setBoardHistory(history => [
+                            ...history, 
+                            { type: 'info', from: 'syslog', message: `Board restarted!` }
+                        ])
+                        break
                     case 'roundStarted':
                         const { currentRound, chipSet } = payload
 
                         setCards(chipSet)
                         setBoardStats(prevStats => ({ ...prevStats, currentRound }))
+                        console.log('stats', boardStats)
                         setBoardHistory(history => [
                             ...history, 
                             { type: 'info', from: 'syslog', message: `Round ${boardStats.currentRound}/${boardStats.roundsToPlay} started, good luck!` }
@@ -227,6 +217,7 @@ export default function Board() {
                         break
     
                     case 'isTurnOf':
+                        console.log(players)
                         setIsTurnOf(payload)
                         setBoardHistory(history => [
                             ...history, 
@@ -238,7 +229,7 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: 'info', from: 'syslog', message: 'You won!'}
+                            { type: 'end', from: 'syslog', message: 'You won, click "restart board" to start again!'}
                         ])
                         break
     
@@ -246,7 +237,7 @@ export default function Board() {
                         setBoardStats(prevStats => ({ ...prevStats, currentState: payload }))
                         setBoardHistory(prevHistory => [
                             ...prevHistory,
-                            { type: 'info', from: 'syslog', message: 'You lost !'}
+                            { type: 'end', from: 'syslog', message: 'You lost, click "restart board" to start again!'}
                         ])
                         break
                     
@@ -287,6 +278,8 @@ export default function Board() {
     
                             return players
                         })
+                        console.log(payload.roundsToPlay)
+                        setBoardStats(prevStats => ({ ...prevStats, roundsToPlay: payload.roundsToPlay }))
 
                         setBoardHistory(history => [
                             ...history, 
@@ -297,29 +290,21 @@ export default function Board() {
 
                     case 'playerLeft':
                         setPlayers(prevPlayers => {
-                            let players = prevPlayers.filter(player => player.username !== payload)
+                            let players = prevPlayers.filter(player => player.username !== payload.relatedTo)
     
                             return players
                         })
+                        setBoardStats(payload.boardStats)
 
                         setBoardHistory(history => [
                             ...history, 
-                            { type: 'info', from: 'syslog', message: `${payload} left`}
+                            { type: 'info', from: 'syslog', message: `${payload.relatedTo} left`}
                         ])
     
                         break
                 }
-    
-            }
-
-            if (process.env.NODE_ENV !== 'development') {
-                window.addEventListener("beforeunload", handleTabClose);
             }
         }
-
-        return () => {
-            window.removeEventListener('beforeunload', handleTabClose);
-        };
     }, [])
 
     const flipCard = id => socket.current?.send(JSON.stringify({ action: 'flipCard', payload: id }))
@@ -334,7 +319,9 @@ export default function Board() {
         }
     }
 
-    const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
+    const leaveBoard = () => {
+        socket.current?.close()
+    }
 
     const chipSet = []
 
@@ -342,11 +329,14 @@ export default function Board() {
         chipSet.push(<img src="/silicon.png" className="object-scale-down"/>)
     }
 
+    const isMyTurn = isTurnOf === players.find(player => player.itsMe)?.username
+
     return (
         <div className="p-8 bg-gray-800">
             <div className="lg:max-w-[1024px] mx-auto my-0 flex flex-col gap-8 justify-between">
-                <div className="grid grid-cols-3 gap-8">
-                    <div className="grid col-span-2 grid-cols-6 grid-rows-4 gap-4 items-start h-fit">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <BoardHistory boardHistory={boardHistory} />
+                    <div className="lg:col-span-2 grid grid-cols-4 grid-rows-6 md:grid-cols-6 md:grid-rows-4 gap-4 h-fit">
                     { cards.map(({ id, clicked, imageUrl, active }) => (
                         <Chip 
                             key={id}
@@ -359,19 +349,19 @@ export default function Board() {
                         />
                     )) }
                     </div>
-                    <BoardHistory boardHistory={boardHistory} />
                 </div>
                 <QuickReactions reactions={reactions} sendQuickReaction={sendQuickReaction} />
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-4">
                 { players.map(({ username, itsMe, matchedPairs, incorrectMatches }) => (
                     <RamCard key={username} itsMe={itsMe} username={username} matchedPairs={matchedPairs} incorrectMatches={incorrectMatches} />
                 ))}
                 </div>
                 <div className="flex flex-row gap-2">
-                    <Form method="post" action="/leave-ram" className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer">
-                        <input hidden value={boardId} name="ramToLeave" readOnly />
-                        <button className="font-semibold text-sm" type="submit">🌱 leave</button>
-                    </Form>
+                    <Link 
+                        to="/"
+                        onClick={() => leaveBoard()}
+                        className="shadow-[1px_1px_0_0_rgba(0,0,0,1)] rounded-lg border-2 border-black bg-gray-300 px-2 py-1 w-fit hover:cursor-pointer font-semibold text-sm"
+                    >🌱 leave</Link>
                     <button 
                         onClick={() => restartBoard()} 
                         disabled={boardStats.currentState !== 'ableToRestart'}
@@ -387,15 +377,6 @@ export default function Board() {
                         <button type="submit" className="py-2 w-full text-center bg-pink-500 hover:bg-pink-600 text-white text-2xl rounded-lg">Let's go!</button>
                     </Form>
                 </Modal>
-            )}
-            { showOrientationModal && (
-                <div className="fixed left-0 top-0 w-full h-full bg-gray-50/95 z-1 flex flex-col items-center">
-                    <div className="rounded-lg p-10 mx-[5%] my-[10%] flex flex-col gap-5 lg:w-[1024px]">
-                        <h1 className="text-xl font-bold text-gray-500">Wrong orientation 😢</h1>
-                        <DesktopComputerIcon className="h-20 text-gray-500" />
-                        <p className="text-sm text-gray-500">Please <strong className="text-black">turn your device into landscape mode</strong> to get the best experience possible</p>
-                    </div>
-                </div>
             )}
         </div>
     )

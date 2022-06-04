@@ -184,36 +184,6 @@ export class Ram {
         const boardId = path[1]
 
         if (boardId) {
-          if (path[2] === 'leave' && request.method === 'DELETE') {
-            const cookie = request.headers.get('Cookie')
-
-            this.connections = this.connections.filter(connection => connection.cookie !== cookie)
-
-            let players = await this.state.storage.get<Player[]>('players') ?? []
-            const boardHistory = await this.state.storage.get<HistorySlice[]>('boardHistory')
-            const playerToRemove = { ...players.find(player => player.cookie === cookie) }
-
-            if (!playerToRemove) {
-              return new Response('Something went wrong, contact the developers')
-            }
-            
-            players = players.filter(player => player.cookie !== cookie)
-            
-            if (!players.length) {
-              await this.state.storage.deleteAll()
-              return new Response('No players, board destroyed.')
-            }
-
-            await this.state.storage.put('players', players)
-            
-            boardHistory?.push({ type: HistorySliceType.LEFT, relatedTo: playerToRemove.username ?? 'no value?' })
-            await this.state.storage.put('boardHistory', boardHistory)
-
-            this.broadcast({ action: 'playerLeft', payload: playerToRemove.username })
-
-            return new Response('Player left ' + playerToRemove.username)
-          }
-
           if (request.method === 'GET') {
             const deck = await this.state.storage.get<TrmCard[]>('deck')
 
@@ -241,21 +211,21 @@ export class Ram {
             
             const playerAlreadyExists = players.find(player => player.cookie === cookie)
 
+            boardStats.roundsToPlay = boardStats.roundsToPlay + 1
+
             if (!playerAlreadyExists && cookie) {
               players.push({ username, cookie, matchedPairs: 0, incorrectMatches: 0 })
               
               boardHistory.push({ type: HistorySliceType.JOINED, relatedTo: 'syslog', message: `${username} joined the board` })
 
               // TODO: remove itsMe?
-              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectTurns: 0, itsMe: false } })
+              this.broadcast({ action: 'playerJoined', payload: { username, matchedPairs: 0, incorrectMatches: 0, itsMe: false, roundsToPlay: boardStats.roundsToPlay } })
             }
   
             if (!isTurnOf) {
               isTurnOf = players[0].username
               boardHistory.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: 'syslog', message: `Is turn of ${username}` })
             }
-
-            boardStats.roundsToPlay = boardStats.roundsToPlay + 1
   
             const data = {
               isTurnOf,
@@ -373,6 +343,8 @@ export class Ram {
             })
 
             const clickedCards = deck.filter(card => card.clicked)
+
+            if (clickedCards.length <= 2) { this.broadcast({ action: 'flipCard', payload }) }
 
             let players = await this.state.storage.get<Player[]>('players') ?? []
 
@@ -507,15 +479,55 @@ export class Ram {
                 await this.state.storage.put('deck', deck)
                 await this.state.storage.put('players', players)
                 await this.state.storage.put('isTurnOf', isTurnOf)
-              }, 1000)
+              }, 1500)
             }
-
-            this.broadcast({ action: 'flipCard', payload })
 
             await this.state.storage.put('boardHistory', boardHistory)
             await this.state.storage.put('boardStats', boardStats)
             await this.state.storage.put('deck', deck)
             break;
+          case 'restartBoard':
+            const refreshedDeck = shuffle(createChipSet(PAIRS))
+            await this.state.storage.put('deck', refreshedDeck)
+
+            let playersCurrent = await this.state.storage.get<Player[]>('players') ?? []
+            playersCurrent = playersCurrent.map(player => ({
+              username: player.username,
+              matchedPairs: 0,
+              incorrectMatches: 0
+            }))
+            await this.state.storage.put('players', playersCurrent)
+
+            let boardStatsRestart = await this.state.storage.get<BoardStats>('boardStats') ?? { currentRound: 0, currentState: 'poweredOff', roundsToPlay: 0 }
+            boardStatsRestart.currentRound = 0
+            boardStatsRestart.currentState = 'poweredOff'
+            await this.state.storage.put('boardStats', boardStatsRestart)
+
+            this.broadcast({ action: 'restartBoard', payload: { deck: refreshedDeck, players: playersCurrent, boardStats: boardStatsRestart }})
+
+            setTimeout(async () => {
+              let isTurnOfRestart = await this.state.storage.get<string>('isTurnOf')
+              let playersAfterRestart = await this.state.storage.get<Player[]>('players') ?? []
+
+              if (!isTurnOfRestart) return
+
+              const currentPlayersIndex = playersAfterRestart.findIndex(player => player.username === isTurnOfRestart)
+
+              try {
+                isTurnOfRestart = playersAfterRestart[currentPlayersIndex + 1].username
+              } catch(e) {
+                isTurnOfRestart = playersAfterRestart[0].username
+              }
+
+              await this.state.storage.put('isTurnOf', isTurnOfRestart)
+
+              boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOfRestart ?? 'no value?' })
+              await this.state.storage.put('boardHistory', boardHistory)
+
+              this.broadcast({ action: 'isTurnOf', payload: isTurnOfRestart })
+            }, 1500)
+
+            break
         }
         
       } catch (err) {
@@ -525,5 +537,59 @@ export class Ram {
       }
     })
 
+    webSocket.addEventListener('close', async () => {
+      const cookie = this.connections.find(connection => connection.server === webSocket)?.cookie
+
+      let boardStatsToAdjust = await this.state.storage.get<BoardStats>('boardStats') ?? { currentRound: 0, currentState: 'poweredOff', roundsToPlay: 0 }
+      boardStatsToAdjust.roundsToPlay = boardStatsToAdjust.roundsToPlay - 1
+      await this.state.storage.put('boardStats', boardStatsToAdjust)
+
+      let players = await this.state.storage.get<Player[]>('players') ?? []
+      const boardHistory = await this.state.storage.get<HistorySlice[]>('boardHistory')
+      const playerToRemove = { ...players.find(player => player.cookie === cookie) }
+
+      if (!playerToRemove) {
+        console.log('Something went wrong')
+        return
+      }
+      
+      players = players.filter(player => player.cookie !== cookie)
+      
+      if (!players.length) {
+        await this.state.storage.deleteAll()
+        console.log('Board to be destroyed')
+        return
+      }
+
+      await this.state.storage.put('players', players)
+
+      this.connections = this.connections.filter(connection => connection.server !== webSocket)
+      
+      boardHistory?.push({ type: HistorySliceType.LEFT, relatedTo: playerToRemove.username ?? 'no value?' })
+      await this.state.storage.put('boardHistory', boardHistory)
+
+      this.broadcast({ action: 'playerLeft', payload: { relatedTo: playerToRemove.username, boardStats: boardStatsToAdjust }})
+
+      let isTurnOfPlayerThatLeft = await this.state.storage.get<string>('isTurnOf')
+
+      if (!isTurnOfPlayerThatLeft) return
+
+      if (playerToRemove.username === isTurnOfPlayerThatLeft) {
+        const currentPlayersIndex = players.findIndex(player => player.username === isTurnOfPlayerThatLeft)
+
+        try {
+          isTurnOfPlayerThatLeft = players[currentPlayersIndex + 1].username
+        } catch(e) {
+          isTurnOfPlayerThatLeft = players[0].username
+        }
+
+        await this.state.storage.put('isTurnOf', isTurnOfPlayerThatLeft)
+
+        boardHistory?.push({ type: HistorySliceType.IS_TURN_OF, relatedTo: isTurnOfPlayerThatLeft ?? 'no value?' })
+        await this.state.storage.put('boardHistory', boardHistory)
+
+        this.broadcast({ action: 'isTurnOf', payload: isTurnOfPlayerThatLeft })
+      }
+     })
   }
 }
