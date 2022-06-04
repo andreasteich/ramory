@@ -31,7 +31,7 @@ export default function Index() {
         <p className="text-4xl">RAMory 🎸</p>
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-4">
-            <h1 className="text-6xl font-extrabold">How good is your memory?</h1>
+            <h1 className="text-6xl font-extrabold">How good is your memory 🧠 ?</h1>
             <h2 className="text-lg">Create a board and send it to friends to compete with their memory.</h2>
           </div>
           <Form method="post" className="w-full md:w-fit">
