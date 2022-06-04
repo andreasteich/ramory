@@ -1,6 +1,12 @@
-import { ActionFunction, redirect } from "@remix-run/cloudflare";
+import { ActionFunction, MetaFunction, redirect } from "@remix-run/cloudflare";
 import { Form } from "@remix-run/react";
 import { constructUrlForDo } from "~/utils";
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "RAMory 🎸",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export const action: ActionFunction = async ({ context, request }) => {
   const { env } = context
