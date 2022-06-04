@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+User-agent: *
+Disallow: /boards/
+
+Sitemap: https://ramory.rocks/sitemap.xml
